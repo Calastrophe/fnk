@@ -14,6 +14,7 @@ use std::sync::Arc;
 use crate::{
     model::{LoginTeacherSchema, RegisterTeacherSchema, Teacher, TokenClaims},
     response::FilteredTeacher,
+    util::ErrorResponse,
     AppState,
 };
 
@@ -27,23 +28,28 @@ use crate::{
  *      Code golf some of the functions here
  */
 
-
 pub async fn register(
     State(data): State<Arc<AppState>>,
     Json(body): Json<RegisterTeacherSchema>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let user_exists: Option<bool> =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)")
             .bind(body.email.to_owned().to_ascii_lowercase())
             .fetch_one(&data.db)
             .await
             .map_err(|e| {
-                api_err(StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e))
+                ErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Database error: {}", e),
+                )
             })?;
 
     if let Some(exists) = user_exists {
         if exists {
-            return Err(api_err(StatusCode::CONFLICT, "User with that email already exists"));
+            return Err(ErrorResponse::new(
+                StatusCode::CONFLICT,
+                "User with that email already exists",
+            ));
         }
     }
 
@@ -51,7 +57,10 @@ pub async fn register(
     let hashed_password = Argon2::default()
         .hash_password(body.password.as_bytes(), &salt)
         .map_err(|e| {
-            api_err(StatusCode::INTERNAL_SERVER_ERROR, format!("Error while hashing password: {}", e))
+            ErrorResponse::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error while hashing password: {}", e),
+            )
         })
         .map(|hash| hash.to_string())?;
 
@@ -65,7 +74,10 @@ pub async fn register(
     .fetch_one(&data.db)
     .await
     .map_err(|e| {
-        api_err(StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e))
+        ErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
     })?;
 
     let user_response = serde_json::json!({"status": "success"});
@@ -75,7 +87,7 @@ pub async fn register(
 pub async fn login(
     State(data): State<Arc<AppState>>,
     Json(body): Json<LoginTeacherSchema>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let user = sqlx::query_as!(
         Teacher,
         "SELECT * FROM teachers WHERE email = $1",
@@ -84,11 +96,12 @@ pub async fn login(
     .fetch_optional(&data.db)
     .await
     .map_err(|e| {
-        api_err(StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)) 
+        ErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
     })?
-    .ok_or_else(|| {
-        api_err(StatusCode::BAD_REQUEST, "Invalid email or password")
-    })?;
+    .ok_or_else(|| ErrorResponse::new(StatusCode::BAD_REQUEST, "Invalid email or password"))?;
 
     // TODO: FUNCTIONAL MAGIC EXPECTED HERE
 
@@ -100,7 +113,10 @@ pub async fn login(
     };
 
     if !is_valid {
-        return Err(api_err(StatusCode::BAD_REQUEST, "Invalid email or password"));
+        return Err(ErrorResponse::new(
+            StatusCode::BAD_REQUEST,
+            "Invalid email or password",
+        ));
     }
 
     let now = chrono::Utc::now();
@@ -133,7 +149,7 @@ pub async fn login(
     Ok(response)
 }
 
-pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let cookie = Cookie::build("token", "")
         .path("/")
         .max_age(time::Duration::hours(-1))
@@ -148,15 +164,6 @@ pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<serde_json:
     Ok(response)
 }
 
-pub async fn is_server_up(State(state): State<Arc<AppState>>) -> impl IntoResponse { "Yes, I am up!" }
-
-// Helper function for cleaning up error responses
-fn api_err(status: StatusCode, msg: impl ToString) -> (StatusCode, Json<serde_json::Value>) {
-    let json_status = match status {
-        StatusCode::INTERNAL_SERVER_ERROR => "error",
-        _ => "fail",
-    };
-
-    (status, Json(serde_json::json!("status": json_status, "message": msg)))
+pub async fn is_server_up(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    "Yes, I am up!"
 }
-
