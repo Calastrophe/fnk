@@ -13,7 +13,6 @@ use std::sync::Arc;
 
 use crate::{
     model::{LoginTeacherSchema, RegisterTeacherSchema, Teacher, TokenClaims},
-    response::FilteredTeacher,
     util::ErrorResponse,
     AppState,
 };
@@ -64,7 +63,7 @@ pub async fn register(
         })
         .map(|hash| hash.to_string())?;
 
-    let user = sqlx::query_as!(
+    let _ = sqlx::query_as!(
         Teacher,
         "INSERT INTO teachers (name,email,password) VALUES ($1, $2, $3) RETURNING *",
         body.name.to_string(),
@@ -103,12 +102,10 @@ pub async fn login(
     })?
     .ok_or_else(|| ErrorResponse::new(StatusCode::BAD_REQUEST, "Invalid email or password"))?;
 
-    // TODO: FUNCTIONAL MAGIC EXPECTED HERE
-
     let is_valid = match PasswordHash::new(&user.password) {
         Ok(parsed_hash) => Argon2::default()
             .verify_password(body.password.as_bytes(), &parsed_hash)
-            .map_or(false, |_| true),
+            .is_ok(),
         Err(_) => false,
     };
 
@@ -164,6 +161,28 @@ pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorRespon
     Ok(response)
 }
 
-pub async fn is_server_up(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+// TODO: Insert some type of cookie into the test taker's browser for authentication.
+
+// // Fetches all the proctored tests for the logged in teacher
+// pub async fn fetch_tests() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+//     unimplemented!()
+// }
+//
+// // Fetches all the results for the given test for the logged in teacher
+// pub async fn fetch_results() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+//     unimplemented!()
+// }
+//
+// // Updates the current score for the given test
+// pub async fn update_score() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResposne>)> {
+//     unimplemented!()
+// }
+//
+// // Flags a specific test result for the logged in teacher
+// pub async fn flag_result() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResposne>)> {
+//     unimplemented!()
+// }
+
+pub async fn is_server_up() -> impl IntoResponse {
     "Yes, I am up!"
 }

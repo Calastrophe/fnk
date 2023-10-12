@@ -1,5 +1,5 @@
-use clap::Parser;
 use axum::{http::StatusCode, Json};
+use clap::Parser;
 use serde::Serialize;
 use sqlx::{Pool, Postgres};
 
@@ -61,7 +61,6 @@ impl AppState {
     }
 }
 
-
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub status: &'static str,
@@ -72,10 +71,15 @@ impl ErrorResponse {
     pub fn new(status: StatusCode, msg: impl Into<String>) -> (StatusCode, Json<ErrorResponse>) {
         let stat = match status {
             StatusCode::INTERNAL_SERVER_ERROR => "error",
-            _ => "fail"
+            _ => "fail",
         };
 
-        (status, Json(ErrorResponse { status: stat, message: msg }))
+        (
+            status,
+            Json(ErrorResponse {
+                status: stat,
+                message: msg.into(),
+            }),
+        )
     }
 }
-
