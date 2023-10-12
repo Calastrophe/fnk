@@ -13,41 +13,42 @@ use std::sync::Arc;
 
 use crate::{
     model::{LoginTeacherSchema, RegisterTeacherSchema, Teacher, TokenClaims},
-    response::FilteredTeacher,
+    util::ErrorResponse,
     AppState,
 };
 
 // Modified and retreived from:
 // https://codevoweb.com/jwt-authentication-in-rust-using-axum-framework/
 
-// TODO: Rework the error responses, make our own schema shared in another common shared crate.
-
-// TODO: Create a table in the database for the tests and the associated API handlers.
+/*
+ * TODO:
+ *      Redesign response schemas for success/failure
+ *      Create the associating schemas for tests
+ *      Code golf some of the functions here
+ */
 
 pub async fn register(
     State(data): State<Arc<AppState>>,
     Json(body): Json<RegisterTeacherSchema>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let user_exists: Option<bool> =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)")
             .bind(body.email.to_owned().to_ascii_lowercase())
             .fetch_one(&data.db)
             .await
             .map_err(|e| {
-                let error_response = serde_json::json!({
-                    "status": "fail",
-                    "message": format!("Database error: {}", e),
-                });
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+                ErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Database error: {}", e),
+                )
             })?;
 
     if let Some(exists) = user_exists {
         if exists {
-            let error_response = serde_json::json!({
-                "status": "fail",
-                "message": "User with that email already exists",
-            });
-            return Err((StatusCode::CONFLICT, Json(error_response)));
+            return Err(ErrorResponse::new(
+                StatusCode::CONFLICT,
+                "User with that email already exists",
+            ));
         }
     }
 
@@ -55,15 +56,14 @@ pub async fn register(
     let hashed_password = Argon2::default()
         .hash_password(body.password.as_bytes(), &salt)
         .map_err(|e| {
-            let error_response = serde_json::json!({
-                "status": "fail",
-                "message": format!("Error while hashing password: {}", e),
-            });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+            ErrorResponse::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error while hashing password: {}", e),
+            )
         })
         .map(|hash| hash.to_string())?;
 
-    let user = sqlx::query_as!(
+    let _ = sqlx::query_as!(
         Teacher,
         "INSERT INTO teachers (name,email,password) VALUES ($1, $2, $3) RETURNING *",
         body.name.to_string(),
@@ -73,25 +73,20 @@ pub async fn register(
     .fetch_one(&data.db)
     .await
     .map_err(|e| {
-        let error_response = serde_json::json!({
-            "status": "fail",
-            "message": format!("Database error: {}", e),
-        });
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        ErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
     })?;
 
-    let user_response = serde_json::json!({"status": "success","data": serde_json::json!({
-        "user": filter_user_record(&user)
-    })});
-
+    let user_response = serde_json::json!({"status": "success"});
     Ok(Json(user_response))
 }
 
-// For logging in a teacher
 pub async fn login(
     State(data): State<Arc<AppState>>,
     Json(body): Json<LoginTeacherSchema>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let user = sqlx::query_as!(
         Teacher,
         "SELECT * FROM teachers WHERE email = $1",
@@ -100,33 +95,25 @@ pub async fn login(
     .fetch_optional(&data.db)
     .await
     .map_err(|e| {
-        let error_response = serde_json::json!({
-            "status": "error",
-            "message": format!("Database error: {}", e),
-        });
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        ErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
     })?
-    .ok_or_else(|| {
-        let error_response = serde_json::json!({
-            "status": "fail",
-            "message": "Invalid email or password",
-        });
-        (StatusCode::BAD_REQUEST, Json(error_response))
-    })?;
+    .ok_or_else(|| ErrorResponse::new(StatusCode::BAD_REQUEST, "Invalid email or password"))?;
 
     let is_valid = match PasswordHash::new(&user.password) {
         Ok(parsed_hash) => Argon2::default()
             .verify_password(body.password.as_bytes(), &parsed_hash)
-            .map_or(false, |_| true),
+            .is_ok(),
         Err(_) => false,
     };
 
     if !is_valid {
-        let error_response = serde_json::json!({
-            "status": "fail",
-            "message": "Invalid email or password"
-        });
-        return Err((StatusCode::BAD_REQUEST, Json(error_response)));
+        return Err(ErrorResponse::new(
+            StatusCode::BAD_REQUEST,
+            "Invalid email or password",
+        ));
     }
 
     let now = chrono::Utc::now();
@@ -152,14 +139,14 @@ pub async fn login(
         .http_only(true)
         .finish();
 
-    let mut response = Response::new(json!({"status": "success", "token": token}).to_string());
+    let mut response = Response::new(json!({"status": "success"}).to_string());
     response
         .headers_mut()
         .insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
     Ok(response)
 }
 
-pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let cookie = Cookie::build("token", "")
         .path("/")
         .max_age(time::Duration::hours(-1))
@@ -174,29 +161,28 @@ pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<serde_json:
     Ok(response)
 }
 
-pub async fn get_me(
-    Extension(teacher): Extension<Teacher>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let json_response = serde_json::json!({
-        "status":  "success",
-        "data": serde_json::json!({
-            "user": filter_user_record(&teacher)
-        })
-    });
+// TODO: Insert some type of cookie into the test taker's browser for authentication.
 
-    Ok(Json(json_response))
-}
+// // Fetches all the proctored tests for the logged in teacher
+// pub async fn fetch_tests() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+//     unimplemented!()
+// }
+//
+// // Fetches all the results for the given test for the logged in teacher
+// pub async fn fetch_results() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+//     unimplemented!()
+// }
+//
+// // Updates the current score for the given test
+// pub async fn update_score() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResposne>)> {
+//     unimplemented!()
+// }
+//
+// // Flags a specific test result for the logged in teacher
+// pub async fn flag_result() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResposne>)> {
+//     unimplemented!()
+// }
 
-fn filter_user_record(user: &Teacher) -> FilteredTeacher {
-    FilteredTeacher {
-        id: user.id.to_string(),
-        email: user.email.to_owned(),
-        name: user.name.to_owned(),
-    }
-}
-
-pub async fn is_server_up(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn is_server_up() -> impl IntoResponse {
     "Yes, I am up!"
 }
-
-// This is where we interact with the database and use JWT auth with various axum extractors.

@@ -1,5 +1,5 @@
 target/
 target-trunk/
-backend/.env
+.env
 /dist/
 /.log/

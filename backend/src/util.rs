@@ -1,4 +1,6 @@
+use axum::{http::StatusCode, Json};
 use clap::Parser;
+use serde::Serialize;
 use sqlx::{Pool, Postgres};
 
 // Setup the command line interface with clap.
@@ -56,5 +58,28 @@ pub struct AppState {
 impl AppState {
     pub fn new(db: Pool<Postgres>, env: Config) -> AppState {
         AppState { db, env }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub status: &'static str,
+    pub message: String,
+}
+
+impl ErrorResponse {
+    pub fn new(status: StatusCode, msg: impl Into<String>) -> (StatusCode, Json<ErrorResponse>) {
+        let stat = match status {
+            StatusCode::INTERNAL_SERVER_ERROR => "error",
+            _ => "fail",
+        };
+
+        (
+            status,
+            Json(ErrorResponse {
+                status: stat,
+                message: msg.into(),
+            }),
+        )
     }
 }
