@@ -26,7 +26,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use util::*;
 mod api;
 mod auth;
-mod model;
+mod request;
 mod response;
 mod util;
 

@@ -8,11 +8,8 @@ use axum::{
     Json,
 };
 
-use crate::{
-    model::{Teacher, TokenClaims},
-    util::ErrorResponse,
-    AppState,
-};
+use crate::request::{Teacher, TokenClaims};
+use crate::{util::ErrorResponse, AppState};
 use axum_extra::extract::cookie::CookieJar;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 
