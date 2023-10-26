@@ -12,11 +12,10 @@ use serde_json::json;
 use std::sync::Arc;
 
 use crate::{
-    model::{LoginTeacherSchema, RegisterTeacherSchema, Teacher, TokenClaims},
+    request::{LoginTeacherSchema, RegisterTeacherSchema, Teacher, TokenClaims},
     util::ErrorResponse,
     AppState,
 };
-
 // Modified and retreived from:
 // https://codevoweb.com/jwt-authentication-in-rust-using-axum-framework/
 
@@ -164,7 +163,7 @@ pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorRespon
 // TODO: Insert some type of cookie into the test taker's browser for authentication.
 
 // // Fetches all the proctored tests for the logged in teacher
-// pub async fn fetch_tests() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+// pub async fn fetch_tests(Extension(teacher): Extension<) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
 //     unimplemented!()
 // }
 //
