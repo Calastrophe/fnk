@@ -1,11 +1,15 @@
 use gloo_net::http::Request;
+use std::cell::Cell;
+use std::rc::Rc;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
+use wasm_bindgen::JsValue;
+//use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+//use web_sys::window;
+//use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 use yew::prelude::*;
 use yew_router::prelude::*;
-use wasm_bindgen::JsCast;
-use js_sys::Function;
-use wasm_bindgen::JsValue;
-use web_sys::{HtmlCanvasElement, CanvasRenderingContext2d};
 
 // const MAX_WIDTH: u32 = 800;
 // const MAX_HEIGHT: u32 = 400;
@@ -182,10 +186,8 @@ fn hello_server() -> Html {
 }
 
 #[function_component(Login)]
-fn login() -> Html
-{
-    html! 
-    {
+fn login() -> Html {
+    html! {
         <>
             <div>
                 <div class="row m-2">
@@ -225,65 +227,129 @@ fn login() -> Html
     }
 }
 
-#[function_component(DrawTest)]
-fn drawtest() -> Html
-{
-    let canvas: HtmlCanvasElement = web_sys::window()
-        .unwrap()
-        .document()
-        .unwrap()
-        .get_element_by_id("myCanvas")
-        .unwrap()
-        .unchecked_into();
+// #[function_component(DrawTest)]
+// fn drawtest() -> Html {
+//     let canvas: HtmlCanvasElement = web_sys::window()
+//         .unwrap()
+//         .document()
+//         .unwrap()
+//         .get_element_by_id("myCanvas")
+//         .unwrap()
+//         .unchecked_into();
 
-    // Get the 2D rendering context
-    let ctx: CanvasRenderingContext2d = canvas
-        .get_context("2d")
+//     // Get the 2D rendering context
+//     let ctx: CanvasRenderingContext2d = canvas
+//         .get_context("2d")
+//         .unwrap()
+//         .unwrap()
+//         .dyn_into()
+//         .unwrap();
+
+//     // Set canvas dimensions
+//     let canvas_offset_x = canvas.offset_left();
+//     let canvas_offset_y = canvas.offset_top();
+//     canvas.set_width(window().unwrap().inner_width().into() - canvas_offset_x);
+//     canvas.set_height(window().unwrap().inner_height().into() - canvas_offset_y);
+
+//     let is_painting = Rc::new(RefCell::new(false));
+//     let line_width = Rc::new(RefCell::new(5));
+//     let start_x = Rc::new(RefCell::new(0));
+//     let start_y = Rc::new(RefCell::new(0));
+
+//     let closure = Closure::wrap(Box::new(|| {
+//         e.prevent_default();
+
+//         let is_painting = is_painting.borrow().clone();
+//         let line_width = line_width.borrow().clone();
+
+//         if is_painting {
+//             ctx.begin_path();
+//             ctx.set_line_width(line_width as f64);
+//             ctx.set_line_cap("round");
+//             ctx.line_to(
+//                 e.client_x() as f64 - canvas_offset_x as f64,
+//                 e.client_y() as f64 - canvas_offset_y as f64,
+//             );
+//             ctx.stroke();
+//         }
+//     }));
+
+//     canvas.add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref());
+//     closure.forget();
+
+//     html! {
+//         <canvas id="myCanvas" width="200" height="100" style="border:1px solid #000000;"></canvas>
+//     }
+// }
+
+fn start() -> Result<(), JsValue> {
+    let document = web_sys::window().unwrap().document().unwrap();
+    let canvas = document
+        .create_element("canvas")?
+        .dyn_into::<web_sys::HtmlCanvasElement>()?;
+    document.body().unwrap().append_child(&canvas)?;
+    canvas.set_width(640);
+    canvas.set_height(480);
+    canvas.style().set_property("border", "solid")?;
+    let context = canvas
+        .get_context("2d")?
         .unwrap()
-        .unwrap()
-        .dyn_into()
-        .unwrap();
-
-    // Set canvas dimensions
-    let canvas_offset_x = canvas.offset_left();
-    let canvas_offset_y = canvas.offset_top();
-    canvas.set_width(window().inner_width()? - canvas_offset_x);
-    canvas.set_height(window().inner_height()? - canvas_offset_y);
-
-    let is_painting = Rc::new(RefCell::new(false));
-    let line_width = Rc::new(RefCell::new(5));
-    let start_x = Rc::new(RefCell::new(0));
-    let start_y = Rc::new(RefCell::new(0));
-
-    let closure = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
-        e.prevent_default();
-    
-        let is_painting = is_painting.borrow().clone();
-        let line_width = line_width.borrow().clone();
-    
-        if is_painting {
-            ctx.begin_path();
-            ctx.line_width(line_width);
-            ctx.line_cap("round");
-            ctx.line_to(
-                e.client_x() as f64 - canvas_offset_x as f64,
-                e.client_y() as f64 - canvas_offset_y as f64,
-            );
-            ctx.stroke();
-        }
-    }));
-    
-    canvas.add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
-    closure.forget();
-
-    html!
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
+    let context = Rc::new(context);
+    let pressed = Rc::new(Cell::new(false));
     {
-        <canvas id="myCanvas" width="200" height="100" style="border:1px solid #000000;"></canvas>
+        let context = context.clone();
+        let pressed = pressed.clone();
+        let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+            context.begin_path();
+            context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+            pressed.set(true);
+        });
+        canvas.add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+    {
+        let context = context.clone();
+        let pressed = pressed.clone();
+        let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+            if pressed.get() {
+                context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                context.stroke();
+                context.begin_path();
+                context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+            }
+        });
+        canvas.add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+    {
+        let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+            pressed.set(false);
+            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+            context.stroke();
+        });
+        canvas.add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    Ok(())
+}
+
+#[function_component(DrawTest)]
+fn drawtest() -> Html {
+    start().expect("Error starting canvas");
+
+    html! {
+        <>
+            <div>
+                <canvas id="myCanvas" width="200" height="100" style="border:1px solid #000000;"></canvas>
+            </div>
+        </>
     }
 }
+
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::new(log::Level::Trace));
     console_error_panic_hook::set_once();
-    yew::Renderer::<App>::new().render();
 }
