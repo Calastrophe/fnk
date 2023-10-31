@@ -12,7 +12,9 @@ use serde_json::json;
 use std::sync::Arc;
 
 use crate::{
-    request::{LoginTeacherSchema, RegisterTeacherSchema, Teacher, TokenClaims},
+    request::{
+        LoginTeacher, RegisterStudent, RegisterTeacher, StudentResult, Teacher, TokenClaims,
+    },
     util::ErrorResponse,
     AppState,
 };
@@ -26,12 +28,12 @@ use crate::{
  *      Code golf some of the functions here
  */
 
-pub async fn register(
+pub async fn register_teacher(
     State(data): State<Arc<AppState>>,
-    Json(body): Json<RegisterTeacherSchema>,
+    Json(body): Json<RegisterTeacher>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let user_exists: Option<bool> =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)")
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM teachers WHERE email = $1)")
             .bind(body.email.to_owned().to_ascii_lowercase())
             .fetch_one(&data.db)
             .await
@@ -82,9 +84,9 @@ pub async fn register(
     Ok(Json(user_response))
 }
 
-pub async fn login(
+pub async fn login_teacher(
     State(data): State<Arc<AppState>>,
-    Json(body): Json<LoginTeacherSchema>,
+    Json(body): Json<LoginTeacher>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
     let user = sqlx::query_as!(
         Teacher,
@@ -145,8 +147,83 @@ pub async fn login(
     Ok(response)
 }
 
+pub async fn register_student(
+    State(data): State<Arc<AppState>>,
+    Json(body): Json<RegisterStudent>,
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    let user_exists: Option<bool> =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM results WHERE name = $1 AND test = $2)")
+            .bind(body.name.to_owned().to_ascii_lowercase())
+            .bind(body.test_id)
+            .fetch_one(&data.db)
+            .await
+            .map_err(|e| {
+                ErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Database error: {}", e),
+                )
+            })?;
+
+    if let Some(exists) = user_exists {
+        if exists {
+            return Err(ErrorResponse::new(
+                StatusCode::CONFLICT,
+                "User with that name already exists in test",
+            ));
+        }
+    }
+
+    let result = sqlx::query_as!(
+        StudentResult,
+        "INSERT INTO results (test, name, score, finished, flagged) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+        body.test_id,
+        body.name.to_string(),
+        0,
+        false,
+        false,
+    )
+    .fetch_one(&data.db)
+    .await
+    .map_err(|e| {
+        ErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    let now = chrono::Utc::now();
+    let iat = now.timestamp() as usize;
+    let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
+    let claims: TokenClaims = TokenClaims {
+        sub: result.id.to_string(),
+        exp,
+        iat,
+    };
+
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(data.env.jwt_secret.as_ref()),
+    )
+    .unwrap();
+
+    let cookie = Cookie::build("STUDENT_TOKEN", token.to_owned())
+        .path("/")
+        .max_age(time::Duration::hours(1))
+        .same_site(SameSite::Lax)
+        .http_only(true)
+        .finish();
+
+    let mut response = Response::new(json!({"status": "success"}).to_string());
+    response
+        .headers_mut()
+        .insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+
+    Ok(response)
+}
+
 pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
-    let cookie = Cookie::build("token", "")
+    let cookie = Cookie::build("TEACHER_TOKEN", "")
         .path("/")
         .max_age(time::Duration::hours(-1))
         .same_site(SameSite::Lax)
@@ -163,7 +240,7 @@ pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorRespon
 // TODO: Insert some type of cookie into the test taker's browser for authentication.
 
 // // Fetches all the proctored tests for the logged in teacher
-// pub async fn fetch_tests(Extension(teacher): Extension<) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+// pub async fn fetch_tests(Extension(teacher): Extension<Teacher>) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
 //     unimplemented!()
 // }
 //
@@ -173,7 +250,7 @@ pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorRespon
 // }
 //
 // // Updates the current score for the given test
-// pub async fn update_score() -> Result<impl IntoResponse, (StatusCode, Json<ErrorResposne>)> {
+// pub async fn update_score(Extension(result): Extension<StudentResult>) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResposne>)> {
 //     unimplemented!()
 // }
 //
@@ -183,5 +260,6 @@ pub async fn logout() -> Result<impl IntoResponse, (StatusCode, Json<ErrorRespon
 // }
 
 pub async fn is_server_up() -> impl IntoResponse {
+    tracing::info!("Server function has been called...");
     "Yes, I am up!"
 }

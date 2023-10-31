@@ -7,18 +7,20 @@ CREATE TABLE
         id UUID NOT NULL PRIMARY KEY DEFAULT (uuid_generate_v4()),
         teacher UUID NOT NULL,
         name VARCHAR(100) NOT NULL,
+        closed BOOL NOT NULL,
 
         FOREIGN KEY (teacher) REFERENCES teachers(id)
+
     );
 
 CREATE TABLE
-    "testresults" (
+    "results" (
         id UUID NOT NULL PRIMARY KEY DEFAULT (uuid_generate_v4()),
         test UUID NOT NULL,
         name VARCHAR(100) NOT NULL,
         score INT NOT NULL,
-        status INT NOT NULL,
-        flagged BIT NOT NULL,
+        finished BOOL NOT NULL,
+        flagged BOOL NOT NULL,
 
         FOREIGN KEY (test) REFERENCES tests(id)
     );

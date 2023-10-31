@@ -1,4 +1,4 @@
-use auth::auth;
+use auth::teacher_auth;
 use axum::{
     body::Body,
     http::{
@@ -77,12 +77,13 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/hello", get(api::is_server_up))
-        .route("/api/auth/register", post(api::register))
-        .route("/api/auth/login", post(api::login))
+        .route("/api/auth/register", post(api::register_teacher))
+        .route("/api/auth/login", post(api::login_teacher))
         .route(
             "/api/auth/logout",
-            get(api::logout).route_layer(middleware::from_fn_with_state(state.clone(), auth)),
+            get(api::logout).route_layer(middleware::from_fn_with_state(state.clone(), teacher_auth)),
         )
+        .route("/api/auth/student_register", post(api::register_student))
         .fallback_service(get(|req: Request<Body>| async move {
             let res = ServeDir::new(&opt.static_dir).oneshot(req).await.unwrap(); // serve dir is infallible
             let status = res.status();

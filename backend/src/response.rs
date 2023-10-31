@@ -1,20 +1,15 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[allow(non_snake_case)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FilteredTeacher {
     pub id: String,
     pub name: String,
     pub email: String,
 }
 
-#[derive(Serialize, Debug)]
-pub struct UserData {
-    pub user: FilteredTeacher,
-}
+// For populating the dashboard
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Tests {}
 
-#[derive(Serialize, Debug)]
-pub struct UserResponse {
-    pub status: String,
-    pub data: UserData,
-}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Results {}

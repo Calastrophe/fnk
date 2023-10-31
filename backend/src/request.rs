@@ -9,6 +9,16 @@ pub struct Teacher {
     pub password: String,
 }
 
+#[derive(Debug, sqlx::FromRow)]
+pub struct StudentResult {
+    pub id: uuid::Uuid,
+    pub test: uuid::Uuid,
+    pub name: String,
+    pub score: i32,
+    pub finished: bool,
+    pub flagged: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenClaims {
     pub sub: String,
@@ -17,14 +27,20 @@ pub struct TokenClaims {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RegisterTeacherSchema {
+pub struct RegisterTeacher {
     pub name: String,
     pub email: String,
     pub password: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct LoginTeacherSchema {
+pub struct LoginTeacher {
     pub email: String,
     pub password: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RegisterStudent {
+    pub name: String,
+    pub test_id: uuid::Uuid,
 }
