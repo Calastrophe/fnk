@@ -1,26 +1,19 @@
--- Add up migration script here
+create table if not exists test (
+        test_id uuid primary key default uuid_generate_v4(),
+        teacher_id uuid not null,
+        name text not null,
+        closed bool not null,
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+        foreign key (teacher_id) references teacher(teacher_id)
+);
 
-CREATE TABLE
-    "tests" (
-        id UUID NOT NULL PRIMARY KEY DEFAULT (uuid_generate_v4()),
-        teacher UUID NOT NULL,
-        name VARCHAR(100) NOT NULL,
-        closed BOOL NOT NULL,
+create table if not exists result (
+        id uuid primary key default uuid_generate_v4(),
+        test_id uuid not null,
+        name text not null,
+        score int not null,
+        finished bool not null,
+        flagged bool not null,
 
-        FOREIGN KEY (teacher) REFERENCES teachers(id)
-
-    );
-
-CREATE TABLE
-    "results" (
-        id UUID NOT NULL PRIMARY KEY DEFAULT (uuid_generate_v4()),
-        test UUID NOT NULL,
-        name VARCHAR(100) NOT NULL,
-        score INT NOT NULL,
-        finished BOOL NOT NULL,
-        flagged BOOL NOT NULL,
-
-        FOREIGN KEY (test) REFERENCES tests(id)
-    );
+        foreign key (test_id) references test(test_id)
+);
