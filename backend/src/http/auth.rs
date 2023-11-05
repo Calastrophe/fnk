@@ -1,9 +1,10 @@
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::CookieJar;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::http::{Error, Result};
+use crate::http::{teacher::Teacher, test::student::StudentResult, Error, Result};
 use crate::util::Config;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,12 +21,10 @@ use axum::{
     Extension, Json,
 };
 
-use crate::http::teacher::Teacher;
-
 pub async fn teacher_auth<B>(
     cookie_jar: CookieJar,
-    db: Extension<PgPool>,
-    cfg: Extension<Config>,
+    Extension(db): Extension<PgPool>,
+    Extension(cfg): Extension<Config>,
     mut req: Request<B>,
     next: Next<B>,
 ) -> Result<impl IntoResponse> {
@@ -65,7 +64,7 @@ pub async fn teacher_auth<B>(
         "SELECT * FROM teacher WHERE teacher_id = $1",
         teacher_id
     )
-    .fetch_optional(&*db)
+    .fetch_optional(&db)
     .await?;
 
     let teacher = teacher.ok_or_else(|| {
@@ -80,8 +79,8 @@ pub async fn teacher_auth<B>(
 
 pub async fn student_auth<B>(
     cookie_jar: CookieJar,
-    db: Extension<PgPool>,
-    cfg: Extension<Config>,
+    Extension(db): Extension<PgPool>,
+    Extension(cfg): Extension<Config>,
     mut req: Request<B>,
     next: Next<B>,
 ) -> Result<impl IntoResponse> {
@@ -112,17 +111,16 @@ pub async fn student_auth<B>(
     .map_err(|_| Error::AuthorizationError("Invalid token".to_string()))?
     .claims;
 
-    let result_id = uuid::Uuid::parse_str(&claims.sub)
+    let student_res_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| Error::AuthorizationError("Invalid token".to_string()))?;
 
     let result = sqlx::query_as!(
         StudentResult,
-        "SELECT * FROM results WHERE id = $1",
-        result_id
+        "SELECT * FROM result WHERE id = $1",
+        student_res_id
     )
-    .fetch_optional(&*db)
-    .await
-    .map_err(|e| e.into())?;
+    .fetch_optional(&db)
+    .await?;
 
     let result = result.ok_or_else(|| {
         Error::AuthorizationError(
@@ -132,4 +130,31 @@ pub async fn student_auth<B>(
 
     req.extensions_mut().insert(result);
     Ok(next.run(req).await)
+}
+
+pub async fn create_cookie(cookie_name: &str, id: uuid::Uuid, cfg: Config) -> String {
+    let now = chrono::Utc::now();
+    let iat = now.timestamp() as usize;
+    let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
+    let claims: TokenClaims = TokenClaims {
+        sub: id.to_string(),
+        exp,
+        iat,
+    };
+
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(cfg.jwt_secret.as_ref()),
+    )
+    .unwrap();
+
+    let cookie = Cookie::build(cookie_name, token.to_owned())
+        .path("/")
+        .max_age(time::Duration::hours(1))
+        .same_site(SameSite::Lax)
+        .http_only(true)
+        .finish();
+
+    cookie.to_string()
 }

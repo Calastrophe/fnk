@@ -41,7 +41,7 @@ pub struct Teacher {
 }
 
 async fn register_teacher(
-    db: Extension<PgPool>,
+    Extension(db): Extension<PgPool>,
     Json(req): Json<RegisterTeacher>,
 ) -> Result<StatusCode> {
     req.validate()?;
@@ -60,11 +60,11 @@ async fn register_teacher(
         email,
         password_hash
     )
-    .execute(&*db)
+    .execute(&db)
     .await
     .map_err(|e| match e {
         sqlx::Error::Database(dbe) if dbe.constraint() == Some("teacher_username_key") => {
-            Error::Conflict("This username is already taken.".into())
+            Error::Conflict("This username is already taken.".to_string())
         }
         _ => e.into(),
     })?;
@@ -73,8 +73,8 @@ async fn register_teacher(
 }
 
 async fn login_teacher(
-    db: Extension<PgPool>,
-    cfg: Extension<Config>,
+    Extension(db): Extension<PgPool>,
+    Extension(cfg): Extension<Config>,
     Json(req): Json<LoginTeacher>,
 ) -> Result<impl IntoResponse> {
     req.validate()?;
@@ -82,38 +82,18 @@ async fn login_teacher(
     let LoginTeacher { email, password } = req;
 
     let teacher = sqlx::query_as!(Teacher, "SELECT * FROM teacher WHERE email = $1", email)
-        .fetch_optional(&*db)
+        .fetch_optional(&db)
         .await?;
 
     if let Some(teacher) = teacher {
         let verified = crate::util::verify(password, teacher.password).await?;
 
         if verified {
-            let now = chrono::Utc::now();
-            let iat = now.timestamp() as usize;
-            let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
-            let claims: TokenClaims = TokenClaims {
-                sub: teacher.teacher_id.to_string(),
-                exp,
-                iat,
-            };
-
-            let token = encode(
-                &Header::default(),
-                &claims,
-                &EncodingKey::from_secret(cfg.jwt_secret.as_ref()),
-            )
-            .unwrap();
-
-            let cookie = Cookie::build("TEACHER_TOKEN", token.to_owned())
-                .path("/")
-                .max_age(time::Duration::hours(1))
-                .same_site(SameSite::Lax)
-                .http_only(true)
-                .finish();
+            let cookie =
+                crate::http::auth::create_cookie("TEACHER_TOKEN", teacher.teacher_id, cfg).await;
 
             let mut headers = HeaderMap::new();
-            headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+            headers.insert(header::SET_COOKIE, cookie.parse().unwrap());
 
             return Ok((StatusCode::ACCEPTED, headers));
         }

@@ -10,8 +10,6 @@ use axum::{
         header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
         HeaderValue, Method, Request, StatusCode,
     },
-    middleware,
-    routing::post,
     Extension,
 };
 use axum::{
@@ -26,8 +24,8 @@ use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 
 mod auth;
 mod error;
-mod student;
 mod teacher;
+mod test;
 
 pub use self::error::Error;
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -44,9 +42,6 @@ pub fn app(opt: Opt, db: PgPool, cfg: Config) -> Router {
             let res = ServeDir::new(&opt.static_dir).oneshot(req).await.unwrap(); // serve dir is infallible
             let status = res.status();
             match status {
-                // If we don't find a file corresponding to the path we serve index.html.
-                // If you want to serve a 404 status code instead you can add a route check as shown in
-                // https://github.com/rksm/axum-yew-setup/commit/a48abfc8a2947b226cc47cbb3001c8a68a0bb25e
                 StatusCode::NOT_FOUND => {
                     let index_path = PathBuf::from(&opt.static_dir).join("index.html");
                     fs::read_to_string(index_path)
@@ -57,8 +52,6 @@ pub fn app(opt: Opt, db: PgPool, cfg: Config) -> Router {
                                 .into_response()
                         })
                 }
-
-                // path was found as a file in the static dir
                 _ => res.into_response(),
             }
         }))
