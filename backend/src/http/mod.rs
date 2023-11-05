@@ -38,6 +38,8 @@ pub fn app(opt: Opt, db: PgPool, cfg: Config) -> Router {
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
     Router::new()
+        .merge(teacher::router())
+        .merge(test::router())
         .fallback_service(get(|req: Request<Body>| async move {
             let res = ServeDir::new(&opt.static_dir).oneshot(req).await.unwrap(); // serve dir is infallible
             let status = res.status();

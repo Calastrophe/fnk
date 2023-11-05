@@ -1,3 +1,9 @@
+use axum::{
+    http::{header, Request},
+    middleware::Next,
+    response::IntoResponse,
+    Extension,
+};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::CookieJar;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
@@ -13,13 +19,6 @@ pub struct TokenClaims {
     pub iat: usize,
     pub exp: usize,
 }
-
-use axum::{
-    http::{header, Request},
-    middleware::Next,
-    response::IntoResponse,
-    Extension, Json,
-};
 
 pub async fn teacher_auth<B>(
     cookie_jar: CookieJar,

@@ -1,8 +1,6 @@
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::{routing::post, Extension, Json, Router};
-use axum_extra::extract::cookie::{Cookie, SameSite};
-use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::Rng;
 use sqlx::PgPool;
 use std::time::Duration;

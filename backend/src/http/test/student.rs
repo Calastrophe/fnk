@@ -1,16 +1,12 @@
-use anyhow::Context;
 use axum::extract::Path;
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::middleware;
 use axum::response::IntoResponse;
 use axum::{routing::post, Extension, Json, Router};
-use axum_extra::extract::cookie::{Cookie, SameSite};
-use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlx::PgPool;
-use std::time::Duration;
 use uuid::Uuid;
 
-use crate::http::auth::{student_auth, TokenClaims};
+use crate::http::auth::student_auth;
 use crate::http::test::Test;
 use crate::http::{Error, Result};
 use crate::util::Config;
@@ -64,7 +60,7 @@ async fn register_student(
     // Does the test exist?
     if let Some(test) = test {
         // Is the test closed?
-        if test.closed != false {
+        if test.closed == true {
             return Err(Error::Conflict(
                 "The test is closed to new registration".to_string(),
             ));
