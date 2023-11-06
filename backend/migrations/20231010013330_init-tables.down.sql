@@ -1,3 +1,3 @@
 -- Add migration script here
 
-DROP TABLE IF EXISTS "teachers";
+DROP TABLE IF EXISTS "teacher";

@@ -1,7 +1,11 @@
-use axum::{http::StatusCode, Json};
+use anyhow::{anyhow, Context};
+use argon2::{
+    password_hash, password_hash::SaltString, Argon2, PasswordHash, PasswordHasher,
+    PasswordVerifier,
+};
 use clap::Parser;
-use serde::Serialize;
-use sqlx::{Pool, Postgres};
+use rand_core::OsRng;
+use tokio::task;
 
 // Setup the command line interface with clap.
 #[derive(Parser, Debug)]
@@ -49,37 +53,31 @@ impl Config {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct AppState {
-    pub(crate) db: Pool<Postgres>,
-    pub(crate) env: Config,
+pub async fn hash(password: String) -> anyhow::Result<String> {
+    task::spawn_blocking(move || {
+        let salt = SaltString::generate(&mut OsRng);
+        Ok(Argon2::default()
+            .hash_password(password.as_bytes(), &salt)
+            .map_err(|e| anyhow!(e).context("Failed to hash password"))?
+            .to_string())
+    })
+    .await
+    .context("panic in hash() fn")?
 }
 
-impl AppState {
-    pub fn new(db: Pool<Postgres>, env: Config) -> AppState {
-        AppState { db, env }
-    }
-}
+pub async fn verify(password: String, hash: String) -> anyhow::Result<bool> {
+    task::spawn_blocking(move || {
+        let hash =
+            PasswordHash::new(&hash).map_err(|e| anyhow!(e).context("Invalid password hash"))?;
 
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-    pub status: &'static str,
-    pub message: String,
-}
+        let res = Argon2::default().verify_password(password.as_bytes(), &hash);
 
-impl ErrorResponse {
-    pub fn new(status: StatusCode, msg: impl Into<String>) -> (StatusCode, Json<ErrorResponse>) {
-        let stat = match status {
-            StatusCode::INTERNAL_SERVER_ERROR => "error",
-            _ => "fail",
-        };
-
-        (
-            status,
-            Json(ErrorResponse {
-                status: stat,
-                message: msg.into(),
-            }),
-        )
-    }
+        match res {
+            Ok(()) => Ok(true),
+            Err(password_hash::Error::Password) => Ok(false),
+            Err(e) => Err(anyhow!(e).context("There was a failure when verifying a password")),
+        }
+    })
+    .await
+    .context("panic in verify() fn")?
 }
