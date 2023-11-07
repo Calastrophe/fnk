@@ -9,12 +9,15 @@ enum Route {
     Home,
     #[at("/hello-server")]
     HelloServer,
+    #[at("/register")]
+    Register,
 }
 
 fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => html! { <h1>{ "Hello Frontend" }</h1> },
         Route::HelloServer => html! { <HelloServer /> },
+        Route::Register => html! { <Register /> },
     }
 }
 
@@ -25,6 +28,11 @@ fn app() -> Html {
             <Switch<Route> render={switch} />
         </BrowserRouter>
     }
+}
+
+#[function_component(Register)]
+fn register() -> Html {
+    unimplemented!()
 }
 
 #[function_component(HelloServer)]

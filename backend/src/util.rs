@@ -4,7 +4,6 @@ use argon2::{
     PasswordVerifier,
 };
 use clap::Parser;
-use rand_core::OsRng;
 use tokio::task;
 
 // Setup the command line interface with clap.
@@ -55,7 +54,7 @@ impl Config {
 
 pub async fn hash(password: String) -> anyhow::Result<String> {
     task::spawn_blocking(move || {
-        let salt = SaltString::generate(&mut OsRng);
+        let salt = SaltString::generate(rand::thread_rng());
         Ok(Argon2::default()
             .hash_password(password.as_bytes(), &salt)
             .map_err(|e| anyhow!(e).context("Failed to hash password"))?

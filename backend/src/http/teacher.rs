@@ -12,7 +12,9 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 pub fn router() -> Router {
-    Router::new().route("/v1/teacher", post(login_teacher).post(register_teacher))
+    Router::new()
+        .route("/v1/teacher/login", post(login_teacher))
+        .route("/v1/teacher/register", post(register_teacher))
 }
 
 #[derive(Deserialize, Validate)]
