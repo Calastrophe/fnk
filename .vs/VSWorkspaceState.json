@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\backend",
+    "\\backend\\migrations",
+    "\\backend\\src",
+    "\\frontend",
+    "\\frontend\\src"
+  ],
+  "SelectedNode": "\\dev.sh",
+  "PreviewInSolutionExplorer": false
+}

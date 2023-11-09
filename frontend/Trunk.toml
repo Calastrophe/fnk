@@ -4,3 +4,6 @@ dist = "../dist"
 
 [[proxy]]
 backend = "http://[::1]:8081/v1/"
+
+[[assets]]
+glob = "static/**/*"
