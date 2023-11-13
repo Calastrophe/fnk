@@ -14,12 +14,18 @@ enum Route {
     Home,
     #[at("/hello-server")]
     HelloServer,
+    #[at("/login")]
+    Login,
+    #[at("/drawtest")]
+    DrawTest,
 }
 
 fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => html! { <h1>{ "Hello Frontend" }</h1> },
         Route::HelloServer => html! { <HelloServer /> },
+        Route::Login => html! { <Login /> },
+        Route::DrawTest => html! { <DrawTest /> },
     }
 }
 
@@ -253,3 +259,4 @@ fn main() {
     console_error_panic_hook::set_once();
     yew::Renderer::<App>::new().render();
 }
+
