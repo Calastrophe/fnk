@@ -14,6 +14,10 @@ enum Route {
     Home,
     #[at("/hello-server")]
     HelloServer,
+    #[at("/login")]
+    Login,
+    #[at("/drawtest")]
+    DrawTest,
     #[at("/register")]
     Register,
 }
@@ -22,6 +26,8 @@ fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => html! { <h1>{ "Hello Frontend" }</h1> },
         Route::HelloServer => html! { <HelloServer /> },
+        Route::Login => html! { <Login /> },
+        Route::DrawTest => html! { <DrawTest /> },
         Route::Register => html! { <Register /> },
     }
 }
@@ -155,6 +161,38 @@ fn start() -> Result<(), JsValue> {
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
     let context = Rc::new(context);
+
+    // Create a flag to keep track of the current mode: 0 for pen, 1 for eraser
+    let drawing_mode = Rc::new(Cell::new(0));
+
+    // Create a button for switching to the eraser
+    let eraser_button = document.create_element("button")?;
+    eraser_button.set_text_content(Some("Eraser"));
+    let drawing_mode_clone = drawing_mode.clone();
+    let context_clone = context.clone();
+    let eraser_closure = Closure::<dyn FnMut(_)>::new(move |_event: web_sys::MouseEvent| {
+        drawing_mode_clone.set(1); // Set mode to eraser
+        context_clone.set_global_composite_operation("destination-out");
+        context_clone.set_line_width(10.0); // Set the width of the eraser
+    });
+    eraser_button.add_event_listener_with_callback("click", eraser_closure.as_ref().unchecked_ref())?;
+    eraser_closure.forget();
+    document.body().unwrap().append_child(&eraser_button)?;
+
+    // Create a button for switching back to the pen
+    let pen_button = document.create_element("button")?;
+    pen_button.set_text_content(Some("Pen"));
+    let drawing_mode_clone = drawing_mode.clone();
+    let context_clone = context.clone();
+    let pen_closure = Closure::<dyn FnMut(_)>::new(move |_event: web_sys::MouseEvent| {
+        drawing_mode_clone.set(0); // Set mode to pen
+        context_clone.set_global_composite_operation("source-over");
+        context_clone.set_line_width(1.0);
+    });
+    pen_button.add_event_listener_with_callback("click", pen_closure.as_ref().unchecked_ref())?;
+    pen_closure.forget();
+    document.body().unwrap().append_child(&pen_button)?;
+
     let pressed = Rc::new(Cell::new(false));
     {
         let context = context.clone();
@@ -220,7 +258,6 @@ fn drawtest() -> Html {
                     </div>
                 </div>
             </div>
-            <canvas width="200" height="100"></canvas>
         </>
     }
 }
@@ -230,3 +267,4 @@ fn main() {
     console_error_panic_hook::set_once();
     yew::Renderer::<App>::new().render();
 }
+
