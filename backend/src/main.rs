@@ -1,12 +1,9 @@
+use anyhow::Context;
 use clap::Parser;
 use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use util::*;
-mod api;
-mod auth;
 mod http;
-mod request;
-mod response;
 mod util;
 
 #[tokio::main]

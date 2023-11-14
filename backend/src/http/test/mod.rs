@@ -10,7 +10,7 @@ use crate::http::{Error, Result};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use super::teacher::Teacher;
+use crate::http::teacher::Teacher;
 pub mod student;
 
 pub fn router() -> Router {
@@ -18,9 +18,12 @@ pub fn router() -> Router {
         .route(
             "/v1/test",
             post(create_test)
-                .post(close_test)
                 .get(get_tests)
                 .route_layer(middleware::from_fn(teacher_auth)),
+        )
+        .route(
+            "/v1/test/close",
+            post(close_test).route_layer(middleware::from_fn(teacher_auth)),
         )
         .merge(student::router())
 }
@@ -53,7 +56,7 @@ async fn create_test(
 
     let CreateTest { name } = req;
 
-    let test = sqlx::query!(
+    let _ = sqlx::query!(
         "INSERT INTO test (teacher_id, name) VALUES ($1, $2)",
         teacher.teacher_id,
         name
@@ -85,8 +88,9 @@ async fn close_test(
     Json(req): Json<CloseTest>,
 ) -> Result<StatusCode> {
     let test = sqlx::query!(
-        "UPDATE test SET closed = true WHERE test_id = $1",
-        teacher.teacher_id
+        "UPDATE test SET closed = true WHERE test_id = $1 AND teacher_id = $2",
+        req.test_id,
+        teacher.teacher_id,
     )
     .execute(&db)
     .await?;

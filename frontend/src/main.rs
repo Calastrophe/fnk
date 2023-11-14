@@ -18,6 +18,8 @@ enum Route {
     Login,
     #[at("/drawtest")]
     DrawTest,
+    #[at("/register")]
+    Register,
 }
 
 fn switch(routes: Route) -> Html {
@@ -26,6 +28,7 @@ fn switch(routes: Route) -> Html {
         Route::HelloServer => html! { <HelloServer /> },
         Route::Login => html! { <Login /> },
         Route::DrawTest => html! { <DrawTest /> },
+        Route::Register => html! { <Register /> },
     }
 }
 
@@ -36,6 +39,11 @@ fn app() -> Html {
             <Switch<Route> render={switch} />
         </BrowserRouter>
     }
+}
+
+#[function_component(Register)]
+fn register() -> Html {
+    unimplemented!()
 }
 
 #[function_component(HelloServer)]
