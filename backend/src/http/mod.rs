@@ -24,6 +24,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 
 mod auth;
 mod error;
+mod question;
 mod teacher;
 mod test;
 
@@ -40,6 +41,7 @@ pub fn app(opt: Opt, db: PgPool, cfg: Config) -> Router {
     Router::new()
         .merge(teacher::router())
         .merge(test::router())
+        .merge(question::router())
         .fallback_service(get(|req: Request<Body>| async move {
             let res = ServeDir::new(&opt.static_dir).oneshot(req).await.unwrap(); // serve dir is infallible
             let status = res.status();
