@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::http::auth::teacher_auth;
-use crate::http::{Error, Result};
+use crate::http::Result;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -36,7 +36,7 @@ pub struct Test {
     pub closed: bool,
 }
 
-#[derive(Deserialize, Serialize, Validate)]
+#[derive(Deserialize, Validate)]
 pub struct CreateTest {
     #[validate(length(min = 3, max = 60))]
     name: String,

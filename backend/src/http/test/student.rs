@@ -22,13 +22,13 @@ pub fn router() -> Router {
         )
 }
 
-#[derive(Serialize, Deserialize, Validate)]
+#[derive(Deserialize, Validate)]
 pub struct RegisterStudent {
     #[validate(length(min = 3, max = 60))]
     name: String,
 }
 
-#[derive(Serialize, Deserialize, Validate)]
+#[derive(Deserialize, Validate)]
 pub struct SetScore {
     #[validate(range(min = 0, max = 30))]
     score: i32,
@@ -60,7 +60,7 @@ async fn register_student(
     // Does the test exist?
     if let Some(test) = test {
         // Is the test closed?
-        if test.closed == true {
+        if test.closed {
             return Err(Error::Conflict(
                 "The test is closed to new registration".to_string(),
             ));

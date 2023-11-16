@@ -1,14 +1,14 @@
-use crate::http::{Error, Result};
+use crate::http::Result;
 use axum::extract::Path;
-use axum::{response::IntoResponse, routing::get, Extension, Json, Router};
-use serde::{Deserialize, Serialize};
+use axum::{routing::get, Extension, Json, Router};
+use serde::Serialize;
 use sqlx::PgPool;
 
 pub fn router() -> Router {
     Router::new().route("/v1/question/:question_level", get(get_questions))
 }
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Serialize, sqlx::FromRow)]
 pub struct Question {
     level: i32,
     question: String,

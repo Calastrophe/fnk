@@ -5,7 +5,6 @@ use rand::Rng;
 use sqlx::PgPool;
 use std::time::Duration;
 
-use super::auth::TokenClaims;
 use crate::http::{Error, Result};
 use crate::util::Config;
 use serde::{Deserialize, Serialize};
