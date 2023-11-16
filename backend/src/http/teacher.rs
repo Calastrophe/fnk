@@ -18,16 +18,33 @@ pub fn router() -> Router {
 
 #[derive(Deserialize, Validate)]
 pub struct RegisterTeacher {
+    #[validate(
+        length(min = 1, message = "An email is required"),
+        email(message = "The email you entered is invalid")
+    )]
     email: String,
+    #[validate(length(min = 3, message = "Your username must be atleast 3 characters long"))]
     username: String,
-    #[validate(length(min = 8, max = 40))]
+    #[validate(length(
+        min = 8,
+        max = 40,
+        message = "Your password must be between 8 and 40 characters long"
+    ))]
     password: String,
 }
 
 #[derive(Deserialize, Validate)]
 pub struct LoginTeacher {
+    #[validate(
+        length(min = 1, message = "An email is required"),
+        email(message = "The email you entered is invalid")
+    )]
     email: String,
-    #[validate(length(min = 8, max = 40))]
+    #[validate(length(
+        min = 8,
+        max = 40,
+        message = "Your password must be between 8 and 40 characters long"
+    ))]
     password: String,
 }
 

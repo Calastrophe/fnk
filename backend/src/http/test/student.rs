@@ -24,13 +24,17 @@ pub fn router() -> Router {
 
 #[derive(Deserialize, Validate)]
 pub struct RegisterStudent {
-    #[validate(length(min = 3, max = 60))]
+    #[validate(length(
+        min = 1,
+        max = 40,
+        message = "Your name must be between 1 and 40 characters long"
+    ))]
     name: String,
 }
 
 #[derive(Deserialize, Validate)]
 pub struct SetScore {
-    #[validate(range(min = 0, max = 30))]
+    #[validate(range(min = 0, max = 30, message = "Invalid score range"))]
     score: i32,
 }
 

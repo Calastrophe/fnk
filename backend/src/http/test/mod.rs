@@ -38,7 +38,11 @@ pub struct Test {
 
 #[derive(Deserialize, Validate)]
 pub struct CreateTest {
-    #[validate(length(min = 3, max = 60))]
+    #[validate(length(
+        min = 3,
+        max = 40,
+        message = "The test's name must be between 3 and 40 characters long"
+    ))]
     name: String,
 }
 

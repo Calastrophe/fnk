@@ -44,7 +44,7 @@ pub async fn teacher_auth<B>(
         });
 
     let token = token.ok_or_else(|| {
-        Error::AuthorizationError("You are not logged in, please provide token".into())
+        Error::Authorization("You are not logged in, please provide token".into())
     })?;
 
     let claims = decode::<TokenClaims>(
@@ -52,11 +52,11 @@ pub async fn teacher_auth<B>(
         &DecodingKey::from_secret(cfg.jwt_secret.as_ref()),
         &Validation::default(),
     )
-    .map_err(|_| Error::AuthorizationError("Invalid token".into()))?
+    .map_err(|_| Error::Authorization("Invalid token".into()))?
     .claims;
 
     let teacher_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| Error::AuthorizationError("Invalid token".into()))?;
+        .map_err(|_| Error::Authorization("Invalid token".into()))?;
 
     let teacher = sqlx::query_as!(
         Teacher,
@@ -67,9 +67,7 @@ pub async fn teacher_auth<B>(
     .await?;
 
     let teacher = teacher.ok_or_else(|| {
-        Error::AuthorizationError(
-            "The teacher belonging to this token no longer exists".to_string(),
-        )
+        Error::Authorization("The teacher belonging to this token no longer exists".to_string())
     })?;
 
     req.extensions_mut().insert(teacher);
@@ -99,19 +97,18 @@ pub async fn student_auth<B>(
                 })
         });
 
-    let token =
-        token.ok_or_else(|| Error::AuthorizationError("You are not logged in".to_string()))?;
+    let token = token.ok_or_else(|| Error::Authorization("You are not logged in".to_string()))?;
 
     let claims = decode::<TokenClaims>(
         &token,
         &DecodingKey::from_secret(cfg.jwt_secret.as_ref()),
         &Validation::default(),
     )
-    .map_err(|_| Error::AuthorizationError("Invalid token".to_string()))?
+    .map_err(|_| Error::Authorization("Invalid token".to_string()))?
     .claims;
 
     let student_res_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| Error::AuthorizationError("Invalid token".to_string()))?;
+        .map_err(|_| Error::Authorization("Invalid token".to_string()))?;
 
     let result = sqlx::query_as!(
         StudentResult,
@@ -122,7 +119,7 @@ pub async fn student_auth<B>(
     .await?;
 
     let result = result.ok_or_else(|| {
-        Error::AuthorizationError(
+        Error::Authorization(
             "The student result belonging to this token no longer exists".to_string(),
         )
     })?;

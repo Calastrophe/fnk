@@ -19,11 +19,11 @@ pub enum Error {
     #[error("an internal server error occurred")]
     Anyhow(#[from] anyhow::Error),
 
-    #[error("validation error in request body")]
+    #[error("{0}")]
     InvalidEntity(#[from] ValidationErrors),
 
     #[error("{0}")]
-    AuthorizationError(String),
+    Authorization(String),
 
     #[error("{0}")]
     UnprocessableEntity(String),
@@ -70,7 +70,7 @@ impl Error {
         match self {
             Sqlx(_) | Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             InvalidEntity(_) | UnprocessableEntity(_) => StatusCode::UNPROCESSABLE_ENTITY,
-            AuthorizationError(_) => StatusCode::UNAUTHORIZED,
+            Authorization(_) => StatusCode::UNAUTHORIZED,
             Conflict(_) => StatusCode::CONFLICT,
         }
     }
