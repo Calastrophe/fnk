@@ -11,7 +11,7 @@ mod test;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
-    #[at("/dashboard")]
+    #[at("/")]
     Dashboard,
     #[at("/login")]
     Login,
