@@ -42,7 +42,7 @@ pub fn Login(cx: Scope) -> Element {
                 br {}
                 input { r#type: "password", name: "password" }
                 br {}
-                button { "Login" }
+                button { "Submit" }
                 br {}
                 div { "{resp_text}" }
             }
@@ -83,13 +83,17 @@ pub fn Register(cx: Scope) -> Element {
             h1 { "Register" }
             form {
                 onsubmit: onsubmit,
+                div { "Email: " }
                 input { r#type: "text", name: "email" }
                 br {}
+                div { "Username: " }
                 input { r#type: "text", name: "username" }
                 br {}
+                div { "Password: " }
                 input { r#type: "password", name: "password" }
                 br {}
-                button { "Register" }
+                br {}
+                button { "Submit" }
                 br {}
                 div { "{resp_text}" }
             }
