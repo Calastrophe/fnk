@@ -47,7 +47,7 @@ pub async fn login_teacher(email: &str, password: &str) -> Result<(), APIError> 
     }
 }
 
-pub async fn register_student(name: &str, id: String) -> Result<(), String> {
+pub async fn register_student(name: &str, id: String) -> Result<(), APIError> {
     let ret = reqwest::Client::new()
         .post(format!("http://localhost:8080/v1/test/{id}/register"))
         .json(&RegisterStudent {

@@ -1,5 +1,4 @@
-use super::{APIError, CloseTest};
-use crate::api::CreateTest;
+use super::{APIError, CloseTest, CreateTest, ErrorResponse};
 use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
@@ -32,7 +31,7 @@ pub async fn create_test(name: &str) -> Result<(), APIError> {
     }
 }
 
-pub async fn close_test(test_id: String) -> Result<(), APIError> {
+pub async fn close_test(test_id: Uuid) -> Result<(), APIError> {
     let ret = reqwest::Client::new()
         .post("http://localhost:8080/v1/test/close")
         .json(&CloseTest { test_id })
@@ -70,4 +69,3 @@ pub async fn get_tests() -> Result<Vec<Test>, APIError> {
         _ => Ok(ret.json::<Vec<Test>>().await?),
     }
 }
-
