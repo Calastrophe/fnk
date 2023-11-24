@@ -2,5 +2,6 @@ target/
 target-trunk/
 .env
 /dist/
+frontend/dist/
 /.log/
 .DS_Store

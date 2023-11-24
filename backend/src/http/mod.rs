@@ -33,7 +33,7 @@ pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
 pub fn app(opt: Opt, db: PgPool, cfg: Config) -> Router {
     let cors = CorsLayer::new()
-        .allow_origin("https://localhost:8080".parse::<HeaderValue>().unwrap())
+        .allow_origin("http://localhost:8080".parse::<HeaderValue>().unwrap())
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);

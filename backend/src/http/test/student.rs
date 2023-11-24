@@ -103,8 +103,20 @@ async fn register_student(
 async fn set_score(
     Extension(db): Extension<PgPool>,
     Extension(student): Extension<StudentResult>,
-    Path(test_id): Path<Uuid>,
     Json(req): Json<SetScore>,
 ) -> Result<impl IntoResponse> {
-    Ok(StatusCode::NOT_IMPLEMENTED)
+    req.validate()?;
+
+    let SetScore { score } = req;
+
+    sqlx::query_as!(
+        StudentResult,
+        "UPDATE result SET score = $1 WHERE id = $2",
+        score,
+        student.id
+    )
+    .execute(&db)
+    .await?;
+
+    Ok(())
 }

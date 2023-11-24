@@ -3,7 +3,7 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 
 use serde_with::DisplayFromStr;
-use validator::ValidationErrors;
+use validator::{ValidationErrors, ValidationErrorsKind};
 
 /// An API-friendly error type.
 #[derive(thiserror::Error, Debug)]
@@ -19,7 +19,7 @@ pub enum Error {
     #[error("an internal server error occurred")]
     Anyhow(#[from] anyhow::Error),
 
-    #[error("{0}")]
+    #[error("validation error in request body")]
     InvalidEntity(#[from] ValidationErrors),
 
     #[error("{0}")]
@@ -42,11 +42,24 @@ impl IntoResponse for Error {
             #[serde_as(as = "DisplayFromStr")]
             message: &'a Error,
 
-            errors: Option<&'a ValidationErrors>,
+            errors: Option<Vec<String>>,
         }
 
         let errors = match &self {
-            Error::InvalidEntity(errors) => Some(errors),
+            Self::InvalidEntity(errors) => Some(
+                errors
+                    .field_errors()
+                    .into_iter()
+                    .map(|error| {
+                        let default = format!("{} is required", error.0);
+                        error.1[0]
+                            .message
+                            .as_ref()
+                            .unwrap_or(&std::borrow::Cow::Owned(default))
+                            .to_string()
+                    })
+                    .collect(),
+            ),
             _ => None,
         };
 

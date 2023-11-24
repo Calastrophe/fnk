@@ -1,0 +1,21 @@
+[application]
+name = "fnk"
+
+default_platform = "web"
+
+out_dir = "dist"
+
+asset_dir = "public"
+
+[web.app]
+
+[web.watcher]
+
+index_on_404 = true
+
+[web.resource]
+
+[web.resource.dev]
+
+[[web.proxy]]
+backend = "http://[::1]:8081/v1/"
