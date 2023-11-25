@@ -38,9 +38,12 @@ pub fn Login(cx: Scope) -> Element {
             h1 { "Login" }
             form {
                 onsubmit: onsubmit,
+                div { "Email: " }
                 input { r#type: "text", name: "email" }
                 br {}
+                div { "Password: " }
                 input { r#type: "password", name: "password" }
+                br {}
                 br {}
                 button { "Submit" }
                 br {}

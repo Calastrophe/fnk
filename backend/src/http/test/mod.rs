@@ -1,16 +1,17 @@
 use axum::http::StatusCode;
-use axum::middleware;
-use axum::response::IntoResponse;
-use axum::{routing::post, Extension, Json, Router};
+use axum::{
+    extract::Path, middleware, response::IntoResponse, routing::post, Extension, Json, Router,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use self::student::StudentResult;
 use crate::http::auth::teacher_auth;
+use crate::http::teacher::Teacher;
 use crate::http::Result;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::http::teacher::Teacher;
 pub mod student;
 
 pub fn router() -> Router {
@@ -22,8 +23,10 @@ pub fn router() -> Router {
                 .route_layer(middleware::from_fn(teacher_auth)),
         )
         .route(
-            "/v1/test/close",
-            post(close_test).route_layer(middleware::from_fn(teacher_auth)),
+            "/v1/test/:test_id/manage",
+            post(close_test)
+                .get(get_results)
+                .route_layer(middleware::from_fn(teacher_auth)),
         )
         .merge(student::router())
 }
@@ -44,11 +47,6 @@ pub struct CreateTest {
         message = "The test's name must be between 3 and 40 characters long"
     ))]
     name: String,
-}
-
-#[derive(Deserialize)]
-pub struct CloseTest {
-    test_id: uuid::Uuid,
 }
 
 async fn create_test(
@@ -86,14 +84,33 @@ async fn get_tests(
     Ok(Json(tests))
 }
 
+async fn get_results(
+    Extension(db): Extension<PgPool>,
+    Extension(teacher): Extension<Teacher>,
+    Path(test_id): Path<Uuid>,
+) -> Result<Json<Vec<StudentResult>>> {
+    let results = sqlx::query_as!(
+        StudentResult,
+        "SELECT result.* FROM result
+        JOIN test ON result.test_id = test.test_id
+        WHERE result.test_id = $1 AND test.teacher_id = $2",
+        test_id,
+        teacher.teacher_id,
+    )
+    .fetch_all(&db)
+    .await?;
+
+    Ok(Json(results))
+}
+
 async fn close_test(
     Extension(db): Extension<PgPool>,
     Extension(teacher): Extension<Teacher>,
-    Json(req): Json<CloseTest>,
+    Path(test_id): Path<Uuid>,
 ) -> Result<StatusCode> {
     let test = sqlx::query!(
         "UPDATE test SET closed = true WHERE test_id = $1 AND teacher_id = $2",
-        req.test_id,
+        test_id,
         teacher.teacher_id,
     )
     .execute(&db)

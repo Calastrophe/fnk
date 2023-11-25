@@ -12,6 +12,7 @@ pub fn router() -> Router {
 pub struct Question {
     level: i32,
     question: String,
+    image_path: Option<String>,
 }
 
 async fn get_questions(

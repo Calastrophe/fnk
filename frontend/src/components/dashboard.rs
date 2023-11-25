@@ -1,9 +1,9 @@
+use crate::api::dashboard::{close_test, create_test, get_tests};
 use dioxus::prelude::*;
 
 pub fn Dashboard(cx: Scope) -> Element {
     // make a request to grab the tests to see if the person is logged in
-
-    // have a button to refetch tests AND refetch when a new one is made
+    let tests = use_future(cx, (), |_| async move { get_tests() });
 
     // if you click on a test, it drops down results
 

@@ -17,7 +17,7 @@ pub fn router() -> Router {
     Router::new()
         .route("/v1/test/:test_id/register", post(register_student))
         .route(
-            "/v1/test/:test_id/",
+            "/v1/test/:test_id",
             post(set_score).route_layer(middleware::from_fn(student_auth)),
         )
 }
