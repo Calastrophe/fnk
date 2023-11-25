@@ -1,7 +1,10 @@
-use super::{APIError, CloseTest, CreateTest, ErrorResponse};
+use super::{
+    handle_response, handle_response_unit, APIError, CloseTest, CreateTest, ErrorResponse,
+};
+use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 pub struct Test {
     pub test_id: Uuid,
     pub teacher_id: Uuid,
@@ -9,8 +12,17 @@ pub struct Test {
     pub closed: bool,
 }
 
+#[derive(Deserialize)]
+pub struct StudentResult {
+    pub id: Uuid,
+    pub test_id: Uuid,
+    pub name: String,
+    pub score: i32,
+    pub flagged: bool,
+}
+
 pub async fn create_test(name: &str) -> Result<(), APIError> {
-    let ret = reqwest::Client::new()
+    let response = reqwest::Client::new()
         .post("http://localhost:8080/v1/test")
         .json(&CreateTest {
             name: name.to_string(),
@@ -18,54 +30,32 @@ pub async fn create_test(name: &str) -> Result<(), APIError> {
         .send()
         .await?;
 
-    match ret.status().is_success() {
-        false => {
-            let resp = ret.json::<ErrorResponse>().await?;
-            let err = match resp.errors {
-                Some(validation_errs) => APIError::Validation(validation_errs),
-                None => APIError::ServerResponse(resp.message),
-            };
-            Err(err)
-        }
-        _ => Ok(()),
-    }
+    handle_response_unit(response).await
 }
 
 pub async fn close_test(test_id: Uuid) -> Result<(), APIError> {
-    let ret = reqwest::Client::new()
-        .post("http://localhost:8080/v1/test/close")
-        .json(&CloseTest { test_id })
+    let response = reqwest::Client::new()
+        .post(format!("http://localhost:8080/v1/{test_id}/manage"))
         .send()
         .await?;
 
-    match ret.status().is_success() {
-        false => {
-            let resp = ret.json::<ErrorResponse>().await?;
-            let err = match resp.errors {
-                Some(validation_errs) => APIError::Validation(validation_errs),
-                None => APIError::ServerResponse(resp.message),
-            };
-            Err(err)
-        }
-        _ => Ok(()),
-    }
+    handle_response_unit(response).await
+}
+
+pub async fn get_results(test_id: Uuid) -> Result<Vec<StudentResult>, APIError> {
+    let response = reqwest::Client::new()
+        .get(format!("http://localhost:8080/v1/{test_id}/manage"))
+        .send()
+        .await?;
+
+    handle_response(response).await
 }
 
 pub async fn get_tests() -> Result<Vec<Test>, APIError> {
-    let ret = reqwest::Client::new()
+    let response = reqwest::Client::new()
         .get("http://localhost:8080/v1/test")
         .send()
         .await?;
 
-    match ret.status().is_success() {
-        false => {
-            let resp = ret.json::<ErrorResponse>().await?;
-            let err = match resp.errors {
-                Some(validation_errs) => APIError::Validation(validation_errs),
-                None => APIError::ServerResponse(resp.message),
-            };
-            Err(err)
-        }
-        _ => Ok(ret.json::<Vec<Test>>().await?),
-    }
+    handle_response(response).await
 }

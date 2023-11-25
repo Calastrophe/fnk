@@ -1,7 +1,8 @@
 pub mod auth;
 pub mod dashboard;
 pub mod test;
-use serde::{Deserialize, Serialize};
+use reqwest::Response;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -54,4 +55,36 @@ struct CloseTest {
 #[derive(Serialize)]
 struct SetScore {
     score: i32,
+}
+
+// Utility functions to handle responses.
+// Separate functions because Rust doesn't have specialization.
+// We could have done dynamic type checking, but rather let the compiler stretch its legs.
+
+async fn handle_response<T: DeserializeOwned>(response: Response) -> Result<T, APIError> {
+    match response.status().is_success() {
+        false => {
+            let resp = response.json::<ErrorResponse>().await?;
+            let err = match resp.errors {
+                Some(validation_errs) => APIError::Validation(validation_errs),
+                None => APIError::ServerResponse(resp.message),
+            };
+            Err(err)
+        }
+        _ => Ok(response.json::<T>().await?),
+    }
+}
+
+async fn handle_response_unit(response: Response) -> Result<(), APIError> {
+    match response.status().is_success() {
+        false => {
+            let resp = response.json::<ErrorResponse>().await?;
+            let err = match resp.errors {
+                Some(validation_errs) => APIError::Validation(validation_errs),
+                None => APIError::ServerResponse(resp.message),
+            };
+            Err(err)
+        }
+        _ => Ok(()),
+    }
 }
