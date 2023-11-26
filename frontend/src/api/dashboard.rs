@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct Test {
-    pub test_id: Uuid,
+    pub id: Uuid,
     pub teacher_id: Uuid,
     pub name: String,
     pub closed: bool,
@@ -17,8 +17,7 @@ pub struct StudentResult {
     pub id: Uuid,
     pub test_id: Uuid,
     pub name: String,
-    pub score: i32,
-    pub flagged: bool,
+    pub level: i32,
 }
 
 pub async fn create_test(name: &str) -> Result<(), APIError> {

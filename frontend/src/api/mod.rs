@@ -48,13 +48,8 @@ struct CreateTest {
 }
 
 #[derive(Serialize)]
-struct CloseTest {
-    test_id: uuid::Uuid,
-}
-
-#[derive(Serialize)]
-struct SetScore {
-    score: i32,
+struct SetLevel {
+    level: i32,
 }
 
 // Utility functions to handle responses.

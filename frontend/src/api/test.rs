@@ -2,6 +2,7 @@ use super::{handle_response, APIError};
 
 #[derive(serde::Deserialize)]
 pub struct Question {
+    id: uuid::Uuid,
     level: i32,
     question: String,
     image_path: Option<String>,
