@@ -25,17 +25,17 @@ pub fn router() -> Router {
 #[derive(Deserialize, Validate)]
 pub struct RegisterStudent {
     #[validate(length(
-        min = 1,
+        min = 3,
         max = 40,
-        message = "Your name must be between 1 and 40 characters long"
+        message = "Your name must be between 3 and 40 characters long"
     ))]
     name: String,
 }
 
 #[derive(Deserialize, Validate)]
-pub struct SetScore {
-    #[validate(range(min = 0, max = 30, message = "Invalid score range"))]
-    score: i32,
+pub struct SetLevel {
+    #[validate(range(min = 1, max = 8, message = "Invalid level range"))]
+    level: i32,
 }
 
 #[derive(Deserialize, sqlx::FromRow, Serialize, Clone)]
@@ -43,8 +43,7 @@ pub struct StudentResult {
     pub id: Uuid,
     pub test_id: Uuid,
     pub name: String,
-    pub score: i32,
-    pub flagged: bool,
+    pub level: i32,
 }
 
 async fn register_student(
@@ -57,7 +56,7 @@ async fn register_student(
 
     let RegisterStudent { name } = req;
 
-    let test = sqlx::query_as!(Test, "SELECT * FROM test WHERE test_id = $1", test_id)
+    let test = sqlx::query_as!(Test, "SELECT * FROM test WHERE id = $1", test_id)
         .fetch_optional(&db)
         .await?;
 
@@ -103,16 +102,16 @@ async fn register_student(
 async fn set_score(
     Extension(db): Extension<PgPool>,
     Extension(student): Extension<StudentResult>,
-    Json(req): Json<SetScore>,
+    Json(req): Json<SetLevel>,
 ) -> Result<impl IntoResponse> {
     req.validate()?;
 
-    let SetScore { score } = req;
+    let SetLevel { level } = req;
 
     sqlx::query_as!(
         StudentResult,
-        "UPDATE result SET score = $1 WHERE id = $2",
-        score,
+        "UPDATE result SET level = $1 WHERE id = $2",
+        level,
         student.id
     )
     .execute(&db)

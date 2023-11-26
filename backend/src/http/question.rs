@@ -10,6 +10,7 @@ pub fn router() -> Router {
 
 #[derive(Serialize, sqlx::FromRow)]
 pub struct Question {
+    id: uuid::Uuid,
     level: i32,
     question: String,
     image_path: Option<String>,
@@ -23,7 +24,7 @@ async fn get_questions(
 
     let questions = sqlx::query_as!(
         Question,
-        "SELECT * FROM question WHERE level = $1",
+        "SELECT * FROM question WHERE level = $1 LIMIT 3",
         question_level
     )
     .fetch_all(&db)

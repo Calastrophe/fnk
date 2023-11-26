@@ -50,7 +50,7 @@ pub struct LoginTeacher {
 
 #[derive(Debug, Deserialize, sqlx::FromRow, Serialize, Clone)]
 pub struct Teacher {
-    pub teacher_id: uuid::Uuid,
+    pub id: uuid::Uuid,
     pub username: String,
     pub email: String,
     pub password: String,
@@ -105,8 +105,7 @@ async fn login_teacher(
         let verified = crate::util::verify(password, teacher.password).await?;
 
         if verified {
-            let cookie =
-                crate::http::auth::create_cookie("TEACHER_TOKEN", teacher.teacher_id, cfg).await;
+            let cookie = crate::http::auth::create_cookie("TEACHER_TOKEN", teacher.id, cfg).await;
 
             let mut headers = HeaderMap::new();
             headers.insert(header::SET_COOKIE, cookie.parse().unwrap());

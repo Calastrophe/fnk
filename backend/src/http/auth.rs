@@ -58,13 +58,9 @@ pub async fn teacher_auth<B>(
     let teacher_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| Error::Authorization("Invalid token".into()))?;
 
-    let teacher = sqlx::query_as!(
-        Teacher,
-        "SELECT * FROM teacher WHERE teacher_id = $1",
-        teacher_id
-    )
-    .fetch_optional(&db)
-    .await?;
+    let teacher = sqlx::query_as!(Teacher, "SELECT * FROM teacher WHERE id = $1", teacher_id)
+        .fetch_optional(&db)
+        .await?;
 
     let teacher = teacher.ok_or_else(|| {
         Error::Authorization("The teacher belonging to this token no longer exists".to_string())
@@ -107,13 +103,13 @@ pub async fn student_auth<B>(
     .map_err(|_| Error::Authorization("Invalid token".to_string()))?
     .claims;
 
-    let student_res_id = uuid::Uuid::parse_str(&claims.sub)
+    let student_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| Error::Authorization("Invalid token".to_string()))?;
 
     let result = sqlx::query_as!(
         StudentResult,
         "SELECT * FROM result WHERE id = $1",
-        student_res_id
+        student_id
     )
     .fetch_optional(&db)
     .await?;

@@ -33,7 +33,7 @@ pub fn router() -> Router {
 
 #[derive(Deserialize, Serialize, sqlx::FromRow, Clone)]
 pub struct Test {
-    pub test_id: Uuid,
+    pub id: Uuid,
     pub teacher_id: Uuid,
     pub name: String,
     pub closed: bool,
@@ -60,7 +60,7 @@ async fn create_test(
 
     let _ = sqlx::query!(
         "INSERT INTO test (teacher_id, name) VALUES ($1, $2)",
-        teacher.teacher_id,
+        teacher.id,
         name
     )
     .execute(&db)
@@ -73,13 +73,9 @@ async fn get_tests(
     Extension(db): Extension<PgPool>,
     Extension(teacher): Extension<Teacher>,
 ) -> Result<Json<Vec<Test>>> {
-    let tests = sqlx::query_as!(
-        Test,
-        "SELECT * FROM test WHERE teacher_id = $1",
-        teacher.teacher_id
-    )
-    .fetch_all(&db)
-    .await?;
+    let tests = sqlx::query_as!(Test, "SELECT * FROM test WHERE teacher_id = $1", teacher.id)
+        .fetch_all(&db)
+        .await?;
 
     Ok(Json(tests))
 }
@@ -92,10 +88,10 @@ async fn get_results(
     let results = sqlx::query_as!(
         StudentResult,
         "SELECT result.* FROM result
-        JOIN test ON result.test_id = test.test_id
+        JOIN test ON result.test_id = test.id
         WHERE result.test_id = $1 AND test.teacher_id = $2",
         test_id,
-        teacher.teacher_id,
+        teacher.id,
     )
     .fetch_all(&db)
     .await?;
@@ -109,9 +105,9 @@ async fn close_test(
     Path(test_id): Path<Uuid>,
 ) -> Result<StatusCode> {
     let test = sqlx::query!(
-        "UPDATE test SET closed = true WHERE test_id = $1 AND teacher_id = $2",
+        "UPDATE test SET closed = true WHERE id = $1 AND teacher_id = $2",
         test_id,
-        teacher.teacher_id,
+        teacher.id,
     )
     .execute(&db)
     .await?;
