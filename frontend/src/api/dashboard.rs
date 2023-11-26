@@ -1,6 +1,4 @@
-use super::{
-    handle_response, handle_response_unit, APIError, CloseTest, CreateTest, ErrorResponse,
-};
+use super::{handle_response, handle_response_unit, APIError, CreateTest, ErrorResponse};
 use serde::Deserialize;
 use uuid::Uuid;
 
