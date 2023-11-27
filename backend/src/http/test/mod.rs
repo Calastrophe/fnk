@@ -1,6 +1,10 @@
 use axum::http::StatusCode;
 use axum::{
-    extract::Path, middleware, response::IntoResponse, routing::post, Extension, Json, Router,
+    extract::Path,
+    middleware,
+    response::IntoResponse,
+    routing::{get, post},
+    Extension, Json, Router,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -23,10 +27,16 @@ pub fn router() -> Router {
                 .route_layer(middleware::from_fn(teacher_auth)),
         )
         .route(
-            "/v1/test/:test_id/manage",
-            post(close_test)
-                .get(get_results)
-                .route_layer(middleware::from_fn(teacher_auth)),
+            "/v1/test/:test_id/close",
+            post(close_test).route_layer(middleware::from_fn(teacher_auth)),
+        )
+        .route(
+            "/v1/test/:test_id/open",
+            post(open_test).route_layer(middleware::from_fn(teacher_auth)),
+        )
+        .route(
+            "/v1/test/:test_id/results",
+            get(get_results).route_layer(middleware::from_fn(teacher_auth)),
         )
         .merge(student::router())
 }
@@ -104,8 +114,24 @@ async fn close_test(
     Extension(teacher): Extension<Teacher>,
     Path(test_id): Path<Uuid>,
 ) -> Result<StatusCode> {
-    let test = sqlx::query!(
+    let _ = sqlx::query!(
         "UPDATE test SET closed = true WHERE id = $1 AND teacher_id = $2",
+        test_id,
+        teacher.id,
+    )
+    .execute(&db)
+    .await?;
+
+    Ok(StatusCode::ACCEPTED)
+}
+
+async fn open_test(
+    Extension(db): Extension<PgPool>,
+    Extension(teacher): Extension<Teacher>,
+    Path(test_id): Path<Uuid>,
+) -> Result<StatusCode> {
+    let _ = sqlx::query!(
+        "UPDATE test SET closed = false WHERE id = $1 AND teacher_id = $2",
         test_id,
         teacher.id,
     )
