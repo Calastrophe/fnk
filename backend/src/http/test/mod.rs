@@ -27,12 +27,8 @@ pub fn router() -> Router {
                 .route_layer(middleware::from_fn(teacher_auth)),
         )
         .route(
-            "/v1/test/:test_id/close",
-            post(close_test).route_layer(middleware::from_fn(teacher_auth)),
-        )
-        .route(
-            "/v1/test/:test_id/open",
-            post(open_test).route_layer(middleware::from_fn(teacher_auth)),
+            "/v1/test/:test_id/manage",
+            post(open_close_test).route_layer(middleware::from_fn(teacher_auth)),
         )
         .route(
             "/v1/test/:test_id/results",
@@ -109,29 +105,13 @@ async fn get_results(
     Ok(Json(results))
 }
 
-async fn close_test(
+async fn open_close_test(
     Extension(db): Extension<PgPool>,
     Extension(teacher): Extension<Teacher>,
     Path(test_id): Path<Uuid>,
 ) -> Result<StatusCode> {
     let _ = sqlx::query!(
-        "UPDATE test SET closed = true WHERE id = $1 AND teacher_id = $2",
-        test_id,
-        teacher.id,
-    )
-    .execute(&db)
-    .await?;
-
-    Ok(StatusCode::ACCEPTED)
-}
-
-async fn open_test(
-    Extension(db): Extension<PgPool>,
-    Extension(teacher): Extension<Teacher>,
-    Path(test_id): Path<Uuid>,
-) -> Result<StatusCode> {
-    let _ = sqlx::query!(
-        "UPDATE test SET closed = false WHERE id = $1 AND teacher_id = $2",
+        "UPDATE test SET closed = NOT closed WHERE id = $1 AND teacher_id = $2",
         test_id,
         teacher.id,
     )
