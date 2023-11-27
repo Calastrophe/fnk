@@ -7,28 +7,13 @@ use dioxus_router::prelude::use_navigator;
 
 pub fn Dashboard(cx: Scope) -> Element {
     let nav = use_navigator(cx);
-
-    // make a request to grab the tests to see if the person is logged in
     let tests_fut = use_future(cx, (), |_| async move { get_tests().await });
-    let creation_menu = use_state(cx, || false);
 
     cx.render(match tests_fut.value() {
         Some(Ok(tests)) => rsx! {
-            // Clicking on this button, shows a small text box to the left of the button.
-            // Then there are two buttons, in the same space of the original, either cancel or
-            // create.
-            if *creation_menu.get() {
-                rsx! {
-                    button {
-                        onclick: |_| creation_menu.set(false),
-                        "Cancel"
-                    }
-                }
-            }
-            button {
-                onclick: |_| creation_menu.set(true),
-                "Create new test"
-            }
+
+            CreationMenu {}
+
             button {
                 onclick: |_| tests_fut.restart(),
                 "Refetch tests"
@@ -51,6 +36,53 @@ pub fn Dashboard(cx: Scope) -> Element {
             },
         },
         None => rsx! { div { "Fetching the tests..." } },
+    })
+}
+
+fn CreationMenu(cx: Scope) -> Element {
+    let visible = use_state(cx, || false);
+    let resp_text = use_state(cx, || None::<String>);
+
+    let on_submit = move |evt: FormEvent| {
+        to_owned![resp_text];
+
+        cx.spawn(async move {
+            let resp = create_test(evt.values["name"][0].as_str()).await;
+
+            match resp {
+                Err(e) => match e {
+                    APIError::Validation(validation_errs) => {
+                        resp_text.set(Some(validation_errs.join(",")))
+                    }
+                    _ => resp_text.set(Some(e.to_string())),
+                },
+                Ok(_) => resp_text.set(Some("Successfully created".to_string())),
+            }
+            std::thread::sleep(std::time::Duration::from_secs(5));
+            resp_text.set(None);
+        });
+    };
+
+    cx.render(if *visible.get() {
+        rsx! {
+            div {
+                form {
+                    input { name: "name", },
+                    button {
+                        onclick: move |_| visible.set(false),
+                        "Cancel"
+                    }
+                    button { "Submit" }
+                }
+            }
+        }
+    } else {
+        rsx! {
+            button {
+                onclick: move |_| visible.set(true),
+                "Create a new test"
+            }
+        }
     })
 }
 

@@ -16,13 +16,9 @@ pub fn Test(cx: Scope, id: String) -> Element {
     // If there needs to be more state, make a struct.
     let has_drawn = use_shared_state_provider(cx, || false);
 
-    if *is_registered.get() {
-        render! {
-            div { "todo" }
-        }
-    } else {
-        render! {
-            div { "todo" }
-        }
-    }
+    None
+}
+
+fn Registration(cx: Scope) -> Element {
+    None
 }
