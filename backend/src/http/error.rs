@@ -43,6 +43,8 @@ impl IntoResponse for Error {
             message: &'a Error,
 
             errors: Option<Vec<String>>,
+
+            auth_error: bool,
         }
 
         let errors = match &self {
@@ -63,6 +65,11 @@ impl IntoResponse for Error {
             _ => None,
         };
 
+        let auth_error = match &self {
+            Self::Authorization(_) => true,
+            _ => false,
+        };
+
         tracing::error!("API error: {self:?}");
 
         (
@@ -70,6 +77,7 @@ impl IntoResponse for Error {
             Json(ErrorResponse {
                 message: &self,
                 errors,
+                auth_error,
             }),
         )
             .into_response()

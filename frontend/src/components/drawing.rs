@@ -1,20 +1,8 @@
-use dioxus::events::{onmousedown, onmousemove, onmouseup};
 use dioxus::html::MouseEvent;
 use dioxus::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Window, CanvasRenderingContext2d};
+use web_sys::CanvasRenderingContext2d;
 
-/*
-    fn clear_canvas(canvas: &web_sys::HtmlCanvasElement) -> Result<(), JsValue> {
-        let context = canvas
-            .get_context("2d")?
-            .unwrap()
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
-
-        context.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
-        Ok(())
-    }
- */
 
 #[derive(Debug)]
 enum Event {
@@ -25,9 +13,17 @@ enum Event {
 
 pub fn Canvas(cx: Scope) -> Element {
     let window = web_sys::window().unwrap();
+
+    // TODO: Have these inside a `use_effect` and query them to update the size of the drawing.
     let c_width = (window.inner_width().unwrap().as_f64().unwrap() / 1.35) as i64;
     let c_height = (window.inner_height().unwrap().as_f64().unwrap() / 1.35) as i64;
+
+    // TODO: Create a `use_ref` or `use_state` for the context replacing `get_context()`
+    // onmounted or use a `use_effect`
+
+    let has_drawn = use_shared_state::<bool>(cx).unwrap();
     let pressed = use_state(cx, || false);
+
 
     let event_handler = move |event: Event| {
         match event {
@@ -50,12 +46,31 @@ pub fn Canvas(cx: Scope) -> Element {
              }
              Event::MouseDown(_) => {
                  pressed.set(true);
+                 *has_drawn.write() = true;
                  let context = get_context();
                  context.begin_path();
              }
 
         }
      };
+
+    let enable_eraser = move |_: MouseEvent| {    
+        let context = get_context();
+        let _ = context.set_global_composite_operation("destination-out");
+        context.set_line_width(10.0);
+    };
+
+    let enable_pen = move |_: MouseEvent| {
+        let context = get_context();
+        let _ = context.set_global_composite_operation("source-over");
+        context.set_line_width(1.0);
+    };
+
+    let clear_canvas = move |_: MouseEvent| {
+        let context = get_context();
+        *has_drawn.write() = false;
+        context.clear_rect(0.0, 0.0, c_width as f64, c_height as f64);
+    };
 
     cx.render(rsx! {
         canvas { 
@@ -67,16 +82,9 @@ pub fn Canvas(cx: Scope) -> Element {
             onmousemove: move |event| event_handler(Event::MouseMove(event)),
             onmouseup: move |event| event_handler(Event::MouseUp(event)),
         }
-        button { onclick: |_| { 
-            let context = get_context();
-            context.set_global_composite_operation("destination-out");
-            context.set_line_width(10.0);
-        } }
-        button { onclick: |_| {
-            let context = get_context();
-            context.set_global_composite_operation("source-over");
-            context.set_line_width(1.0);
-        } }
+        button { onclick: enable_eraser }
+        button { onclick: enable_pen }
+        button { onclick: clear_canvas }
     })
 }
 

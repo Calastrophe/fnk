@@ -3,7 +3,6 @@ pub mod dashboard;
 pub mod test;
 use reqwest::Response;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::collections::HashMap;
 use thiserror::Error;
 
 // API internal types for creating / parsing JSON requests & responses
@@ -16,12 +15,15 @@ pub enum APIError {
     ServerResponse(String),
     #[error("{0:?}")]
     Validation(Vec<String>),
+    #[error("{0}")]
+    Authorization(String),
 }
 
 #[derive(Deserialize, Debug)]
 struct ErrorResponse {
     message: String,
     errors: Option<Vec<String>>,
+    auth_error: bool,
 }
 
 #[derive(Serialize)]
@@ -60,11 +62,11 @@ async fn handle_response<T: DeserializeOwned>(response: Response) -> Result<T, A
     match response.status().is_success() {
         false => {
             let resp = response.json::<ErrorResponse>().await?;
-            let err = match resp.errors {
-                Some(validation_errs) => APIError::Validation(validation_errs),
-                None => APIError::ServerResponse(resp.message),
-            };
-            Err(err)
+            match (resp.errors, resp.auth_error) {
+                (_, true) => Err(APIError::Authorization(resp.message)),
+                (Some(errors), false) => Err(APIError::Validation(errors)),
+                (None, false) => Err(APIError::ServerResponse(resp.message)),
+            }
         }
         _ => Ok(response.json::<T>().await?),
     }
@@ -74,11 +76,11 @@ async fn handle_response_unit(response: Response) -> Result<(), APIError> {
     match response.status().is_success() {
         false => {
             let resp = response.json::<ErrorResponse>().await?;
-            let err = match resp.errors {
-                Some(validation_errs) => APIError::Validation(validation_errs),
-                None => APIError::ServerResponse(resp.message),
-            };
-            Err(err)
+            match (resp.errors, resp.auth_error) {
+                (_, true) => Err(APIError::Authorization(resp.message)),
+                (Some(errors), false) => Err(APIError::Validation(errors)),
+                (None, false) => Err(APIError::ServerResponse(resp.message)),
+            }
         }
         _ => Ok(()),
     }
