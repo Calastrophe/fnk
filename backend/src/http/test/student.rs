@@ -69,7 +69,19 @@ async fn register_student(
             ));
         }
 
-        // Insert the student result into the table, return on any conflicts.
+        let existing_result = sqlx::query_as!(
+            StudentResult,
+            "SELECT * FROM result WHERE (test_id, name) = ($1, $2)",
+            test_id,
+            name
+        )
+        .fetch_optional(&db)
+        .await?;
+
+        if existing_result.is_some() {
+            return Err(Error::Conflict("This name is already taken".to_string()));
+        }
+
         let res = sqlx::query_as!(
             StudentResult,
             "INSERT INTO result (test_id, name) VALUES ($1, $2) RETURNING *",
@@ -85,7 +97,6 @@ async fn register_student(
             _ => e.into(),
         })?;
 
-        // Create a cookie for this student which correlates to the student result.
         let cookie = crate::http::auth::create_cookie("STUDENT_TOKEN", res.id, cfg).await;
 
         let mut headers = HeaderMap::new();
