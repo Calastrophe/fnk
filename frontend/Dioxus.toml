@@ -9,6 +9,8 @@ asset_dir = "public"
 
 [web.app]
 
+title = "FnK"
+
 [web.watcher]
 
 index_on_404 = true

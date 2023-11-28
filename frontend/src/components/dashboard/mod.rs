@@ -33,7 +33,9 @@ pub fn Dashboard(cx: Scope) -> Element {
     };
 
     cx.render(rsx! {
-        NavBar {}
+        NavBar {
+            onrefresh: move |_| tests_fut.restart(),
+        }
 
         tests_rendered
     })

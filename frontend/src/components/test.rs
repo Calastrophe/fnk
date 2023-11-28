@@ -56,6 +56,11 @@ pub fn Test(cx: Scope, id: String) -> Element {
     let _ = use_shared_state_provider(cx, || TestState::new());
     let test_state = use_shared_state::<TestState>(cx).unwrap();
 
+    let visible = match test_state.read().has_drawn {
+        true => "visible",
+        _ => "hidden",
+    };
+
     cx.render(match test_state.read().state {
         State::Testing => {
             rsx! {
@@ -66,8 +71,22 @@ pub fn Test(cx: Scope, id: String) -> Element {
                     onclear: move |_| test_state.write().has_drawn = false,
                 }
 
-                button { onclick: move |_| test_state.write().perform_action(Action::Next) }
-                button { onclick: move |_| test_state.write().perform_action(Action::LevelUp) }
+                div {
+                    visibility: "{visible}",
+                    "Do you want a harder question?",
+                    div {
+                        button {
+                            visibility: "{visible}",
+                            onclick: move |_| test_state.write().perform_action(Action::Next),
+                            "No",
+                        }
+                        button {
+                            visibility: "{visible}",
+                            onclick: move |_| test_state.write().perform_action(Action::LevelUp),
+                            "Yes",
+                        }
+                    }
+                }
             }
         }
         State::Registration => {
@@ -89,7 +108,10 @@ fn QuestionBar(cx: Scope, level: i32, attempt: i32) -> Element {
             let question = &questions[(*attempt - 1) as usize].question;
 
             // TODO: Implement image in question, if needed
-            rsx! { div { "{question}" } }
+            rsx! { div {
+                class: "flex justify-center py-20",
+                "{question}" }
+            }
         }
         Some(Err(_)) => rsx! { div { "There was an error fetching questions..." } },
         None => rsx! { div { "Fetching a question..." } },
@@ -100,7 +122,7 @@ fn QuestionBar(cx: Scope, level: i32, attempt: i32) -> Element {
 
 #[inline_props]
 fn Registration(cx: Scope, id: String) -> Element {
-    let resp_text = use_state(cx, || String::new());
+    let resp_text = use_state(cx, || None::<String>);
     let test_state = use_shared_state::<TestState>(cx).unwrap();
 
     let onsubmit = move |evt: FormEvent| {
@@ -114,9 +136,9 @@ fn Registration(cx: Scope, id: String) -> Element {
             match resp {
                 Err(e) => match e {
                     APIError::Validation(validation_errs) => {
-                        resp_text.set(validation_errs.join(", "))
+                        resp_text.set(Some(validation_errs.get(0).unwrap().to_string()))
                     }
-                    _ => resp_text.set(e.to_string()),
+                    _ => resp_text.set(Some(e.to_string())),
                 },
 
                 Ok(_) => test_state.write().state = State::Testing,
@@ -124,19 +146,43 @@ fn Registration(cx: Scope, id: String) -> Element {
         });
     };
 
-    render! {
-        h1 { "Register" }
-        form {
-            onsubmit: onsubmit,
-            div { "Name: " }
-            input { r#type: "text", name: "name" }
-            br {}
-            br {}
-            button { "Submit" }
-            br {}
-            div { "{resp_text}" }
+    let (visible, err) = match resp_text.get() {
+        Some(v) => (true, v.as_str()),
+        None => (false, ""),
+    };
+
+    cx.render(rsx! {
+        div { class: "bg-gray-50 font-[sans-serif] text-[#333]",
+            div { class: "min-h-screen flex flex-col items-center justify-center py-6 px-4",
+                div { class: "max-w-md w-full border py-2 px-6 rounded border-gray-300 bg-white",
+                    form { class: "mt-2 space-y-4",
+                        onsubmit: onsubmit,
+                        style: "display: flex; flex-direction: column; gap: 10px;",
+                        input { class: "px-4 py-3 bg-gray-100 w-full text-sm outline-[#333] rounded",
+                            r#type: "text",
+                            placeholder: "Enter your name",
+                            name: "name"
+                        }
+                        div { class: "!mt-10",
+                            button { class: "w-full py-2.5 px-4 text-sm rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none",
+                                "Submit"
+                            }
+                        }
+                        if visible {
+                            rsx! {
+                                div { class: "p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400",
+                                    span { class: "font-medium",
+                                        "Invalid! "
+                                    }
+                                    "{err}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-    }
+    })
 }
 
 #[inline_props]

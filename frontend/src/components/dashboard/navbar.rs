@@ -1,12 +1,18 @@
 use crate::api::{dashboard::create_test, APIError};
 use dioxus::prelude::*;
 
-pub fn NavBar(cx: Scope) -> Element {
+#[derive(Props)]
+pub struct NavBarProps<'a> {
+    onrefresh: EventHandler<'a, MouseEvent>,
+}
+
+pub fn NavBar<'a>(cx: Scope<'a, NavBarProps<'a>>) -> Element {
     cx.render(rsx! {
         div {
-            CreateButton { }
+            CreateButton {}
 
             button {
+                onclick: move |evt| cx.props.onrefresh.call(evt),
                 "Refetch tests"
             }
         }
@@ -44,7 +50,7 @@ fn CreateButton(cx: Scope) -> Element {
         rsx! {
             form {
                 onsubmit: on_submit,
-                input { name: "name", },
+                input { name: "name" },
                 button {
                     onclick: move |_| visible.set(false),
                     "Cancel"

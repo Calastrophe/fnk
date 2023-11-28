@@ -29,6 +29,10 @@ fn main() {
 
 fn App(cx: Scope) -> Element {
     render! {
+        link {
+            rel: "stylesheet",
+            href: "https://unpkg.com/tailwindcss@^2.0/dist/tailwind.min.css"
+        }
         Router::<Route> {}
     }
 }

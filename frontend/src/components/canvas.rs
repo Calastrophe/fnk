@@ -3,8 +3,6 @@ use dioxus::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::CanvasRenderingContext2d;
 
-
-
 #[derive(Debug)]
 enum Event {
     MouseMove(MouseEvent),
@@ -22,50 +20,35 @@ pub fn Canvas<'a>(cx: Scope<'a, CanvasProps<'a>>) -> Element {
     let window = web_sys::window().unwrap();
 
     // TODO: Have these inside a `use_effect` and query them to update the size of the drawing.
-    let c_width = (window.inner_width().unwrap().as_f64().unwrap() / 1.35) as i64;
-    let c_height = (window.inner_height().unwrap().as_f64().unwrap() / 1.35) as i64;
+    let c_width = (window.inner_width().unwrap().as_f64().unwrap() / 1.10) as i64;
+    let c_height = (window.inner_height().unwrap().as_f64().unwrap() / 1.5) as i64;
 
     let pressed = use_state(cx, || false);
 
-    let event_handler = move |event: Event| {
-        match event {
-             Event::MouseMove(e) => {
-                 if *pressed.get() {
-                     let cords = e.element_coordinates().to_f64();
-                     let context = get_context();
-                     context.line_to(cords.x, cords.y);
-                     context.stroke();
-                     context.begin_path();
-                     context.move_to(cords.x, cords.y);
-                 }
-             }
-             Event::MouseUp(e) => {
-                 pressed.set(false);
-                 let context = get_context();
-                 let cords = e.element_coordinates().to_f64();
-                 context.line_to(cords.x, cords.y);
-                 context.stroke();
-             }
-             Event::MouseDown(e) => {
-                 pressed.set(true);
-                 cx.props.ondraw.call(e);
-                 let context = get_context();
-                 context.begin_path();
-             }
-
+    let event_handler = move |event: Event| match event {
+        Event::MouseMove(e) => {
+            if *pressed.get() {
+                let cords = e.element_coordinates().to_f64();
+                let context = get_context();
+                context.line_to(cords.x, cords.y);
+                context.stroke();
+                context.begin_path();
+                context.move_to(cords.x, cords.y);
+            }
         }
-     };
-
-    let enable_eraser = move |_: MouseEvent| {    
-        let context = get_context();
-        let _ = context.set_global_composite_operation("destination-out");
-        context.set_line_width(10.0);
-    };
-
-    let enable_pen = move |_: MouseEvent| {
-        let context = get_context();
-        let _ = context.set_global_composite_operation("source-over");
-        context.set_line_width(1.0);
+        Event::MouseUp(e) => {
+            pressed.set(false);
+            let context = get_context();
+            let cords = e.element_coordinates().to_f64();
+            context.line_to(cords.x, cords.y);
+            context.stroke();
+        }
+        Event::MouseDown(e) => {
+            pressed.set(true);
+            cx.props.ondraw.call(e);
+            let context = get_context();
+            context.begin_path();
+        }
     };
 
     let clear_canvas = move |e: MouseEvent| {
@@ -75,18 +58,24 @@ pub fn Canvas<'a>(cx: Scope<'a, CanvasProps<'a>>) -> Element {
     };
 
     cx.render(rsx! {
-        canvas { 
-            id: "drawing-box", 
-            height: c_height, 
-            width: c_width, 
-            style: "border: solid; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%;",
-            onmousedown: move |event| event_handler(Event::MouseDown(event)),
-            onmousemove: move |event| event_handler(Event::MouseMove(event)),
-            onmouseup: move |event| event_handler(Event::MouseUp(event)),
-        }
-        button { onclick: enable_eraser }
-        button { onclick: enable_pen }
-        button { onclick: clear_canvas }
+            div { class: "flex flex-col justify-center",
+                div { class: "flex flex-row justify-center",
+                    button { class: "text-white bg-gray-800 hover:bg-gray-900 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700",
+                        onclick: clear_canvas,
+                        "Clear"
+                    }
+                }
+
+                canvas { class: "place-self-center",
+                    id: "drawing-box",
+                    height: c_height,
+                    width: c_width,
+                    style: "border: solid;",
+                    onmousedown: move |event| event_handler(Event::MouseDown(event)),
+                    onmousemove: move |event| event_handler(Event::MouseMove(event)),
+                    onmouseup: move |event| event_handler(Event::MouseUp(event)),
+                }
+            }
     })
 }
 
