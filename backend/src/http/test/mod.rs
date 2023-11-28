@@ -1,10 +1,6 @@
 use axum::http::StatusCode;
 use axum::{
-    extract::Path,
-    middleware,
-    response::IntoResponse,
-    routing::{get, post},
-    Extension, Json, Router,
+    extract::Path, middleware, response::IntoResponse, routing::post, Extension, Json, Router,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -28,11 +24,9 @@ pub fn router() -> Router {
         )
         .route(
             "/v1/test/:test_id/manage",
-            post(open_close_test).route_layer(middleware::from_fn(teacher_auth)),
-        )
-        .route(
-            "/v1/test/:test_id/results",
-            get(get_results).route_layer(middleware::from_fn(teacher_auth)),
+            post(inverse_closed)
+                .get(get_results)
+                .route_layer(middleware::from_fn(teacher_auth)),
         )
         .merge(student::router())
 }
@@ -105,7 +99,7 @@ async fn get_results(
     Ok(Json(results))
 }
 
-async fn open_close_test(
+async fn inverse_closed(
     Extension(db): Extension<PgPool>,
     Extension(teacher): Extension<Teacher>,
     Path(test_id): Path<Uuid>,

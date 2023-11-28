@@ -2,7 +2,6 @@ mod api;
 mod components;
 use components::{
     dashboard::Dashboard,
-    drawing::Canvas,
     forms::{Login, Register},
     test::Test,
     NotFound,
@@ -22,8 +21,6 @@ enum Route {
     Test { id: String },
     #[route("/:..route")]
     NotFound { route: Vec<String> },
-    #[route("/drawing")]
-    Canvas {},
 }
 
 fn main() {

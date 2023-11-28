@@ -1,5 +1,5 @@
+pub mod canvas;
 pub mod dashboard;
-pub mod drawing;
 pub mod forms;
 pub mod test;
 use dioxus::prelude::*;

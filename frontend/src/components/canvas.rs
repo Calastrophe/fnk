@@ -4,6 +4,7 @@ use wasm_bindgen::JsCast;
 use web_sys::CanvasRenderingContext2d;
 
 
+
 #[derive(Debug)]
 enum Event {
     MouseMove(MouseEvent),
@@ -11,19 +12,20 @@ enum Event {
     MouseUp(MouseEvent),
 }
 
-pub fn Canvas(cx: Scope) -> Element {
+#[derive(Props)]
+pub struct CanvasProps<'a> {
+    ondraw: EventHandler<'a, MouseEvent>,
+    onclear: EventHandler<'a, MouseEvent>,
+}
+
+pub fn Canvas<'a>(cx: Scope<'a, CanvasProps<'a>>) -> Element {
     let window = web_sys::window().unwrap();
 
     // TODO: Have these inside a `use_effect` and query them to update the size of the drawing.
     let c_width = (window.inner_width().unwrap().as_f64().unwrap() / 1.35) as i64;
     let c_height = (window.inner_height().unwrap().as_f64().unwrap() / 1.35) as i64;
 
-    // TODO: Create a `use_ref` or `use_state` for the context replacing `get_context()`
-    // onmounted or use a `use_effect`
-
-    let has_drawn = use_shared_state::<bool>(cx).unwrap();
     let pressed = use_state(cx, || false);
-
 
     let event_handler = move |event: Event| {
         match event {
@@ -44,9 +46,9 @@ pub fn Canvas(cx: Scope) -> Element {
                  context.line_to(cords.x, cords.y);
                  context.stroke();
              }
-             Event::MouseDown(_) => {
+             Event::MouseDown(e) => {
                  pressed.set(true);
-                 *has_drawn.write() = true;
+                 cx.props.ondraw.call(e);
                  let context = get_context();
                  context.begin_path();
              }
@@ -66,9 +68,9 @@ pub fn Canvas(cx: Scope) -> Element {
         context.set_line_width(1.0);
     };
 
-    let clear_canvas = move |_: MouseEvent| {
+    let clear_canvas = move |e: MouseEvent| {
         let context = get_context();
-        *has_drawn.write() = false;
+        cx.props.onclear.call(e);
         context.clear_rect(0.0, 0.0, c_width as f64, c_height as f64);
     };
 
