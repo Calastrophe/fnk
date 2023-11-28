@@ -53,7 +53,8 @@ impl TestState {
 
 #[inline_props]
 pub fn Test(cx: Scope, id: String) -> Element {
-    let test_state = use_ref(cx, || TestState::new());
+    let _ = use_shared_state_provider(cx, || TestState::new());
+    let test_state = use_shared_state::<TestState>(cx).unwrap();
 
     cx.render(match test_state.read().state {
         State::Testing => {
@@ -70,9 +71,7 @@ pub fn Test(cx: Scope, id: String) -> Element {
             }
         }
         State::Registration => {
-            rsx! { Registration {
-                onregister: move |_| test_state.write().state = State::Testing,
-                id: id.clone() }
+            rsx! { Registration { id: id.clone() }
             }
         }
         State::Finished => {
@@ -88,6 +87,8 @@ fn QuestionBar(cx: Scope, level: i32, attempt: i32) -> Element {
     let question = match questions.value() {
         Some(Ok(questions)) => {
             let question = &questions[(*attempt - 1) as usize].question;
+
+            // TODO: Implement image in question, if needed
             rsx! { div { "{question}" } }
         }
         Some(Err(_)) => rsx! { div { "There was an error fetching questions..." } },
@@ -97,18 +98,16 @@ fn QuestionBar(cx: Scope, level: i32, attempt: i32) -> Element {
     cx.render(question)
 }
 
-#[derive(Props)]
-struct RegistrationProps<'a> {
-    id: String,
-    onregister: EventHandler<'a, FormEvent>,
-}
-
-fn Registration<'a>(cx: Scope<'a, RegistrationProps<'a>>) -> Element {
+#[inline_props]
+fn Registration(cx: Scope, id: String) -> Element {
     let resp_text = use_state(cx, || String::new());
+    let test_state = use_shared_state::<TestState>(cx).unwrap();
 
     let onsubmit = move |evt: FormEvent| {
         to_owned![resp_text];
-        to_owned![cx.props.id];
+        to_owned![test_state];
+        to_owned![id];
+
         cx.spawn(async move {
             let resp = register_student(&id, evt.values["name"][0].as_str()).await;
 
@@ -120,9 +119,7 @@ fn Registration<'a>(cx: Scope<'a, RegistrationProps<'a>>) -> Element {
                     _ => resp_text.set(e.to_string()),
                 },
 
-                Ok(_) => {
-                    // Call onregister event-handler, somehow...
-                }
+                Ok(_) => test_state.write().state = State::Testing,
             }
         });
     };
@@ -148,5 +145,15 @@ fn Finished(cx: Scope, id: String, level: i32) -> Element {
         set_level(&id, level).await
     });
 
-    None
+    cx.render(match resp.value() {
+        Some(Ok(_)) => {
+            rsx! { "Thank you, your score has been submitted." }
+        }
+        Some(Err(e)) => {
+            rsx! { "There was an error submitting your score... {e}" }
+        }
+        None => {
+            rsx! { "Submitting your score..." }
+        }
+    })
 }

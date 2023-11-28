@@ -31,7 +31,7 @@ pub async fn register_student(id: &str, name: &str) -> Result<(), APIError> {
 
 pub async fn set_level(id: &str, level: i32) -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post(format!("https://localhost:8080/v1/test/{id}"))
+        .post(format!("http://localhost:8080/v1/test/{id}"))
         .json(&SetLevel { level })
         .send()
         .await?;
