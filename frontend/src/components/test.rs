@@ -28,7 +28,7 @@ enum State {
 impl TestState {
     pub fn new() -> Self {
         TestState {
-            state: State::Testing,
+            state: State::Registration,
             level: 1,
             attempt: 1,
             has_drawn: false,
