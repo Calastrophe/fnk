@@ -1,3 +1,4 @@
+use super::test::{Action, TestState};
 use dioxus::html::MouseEvent;
 use dioxus::prelude::*;
 use wasm_bindgen::JsCast;
@@ -10,18 +11,13 @@ enum Event {
     MouseUp(MouseEvent),
 }
 
-#[derive(Props)]
-pub struct CanvasProps<'a> {
-    ondraw: EventHandler<'a, MouseEvent>,
-    onclear: EventHandler<'a, MouseEvent>,
-}
-
-pub fn Canvas<'a>(cx: Scope<'a, CanvasProps<'a>>) -> Element {
+pub fn Canvas(cx: Scope) -> Element {
     let window = web_sys::window().unwrap();
 
     // TODO: Have these inside a `use_effect` and query them to update the size of the drawing.
     let c_width = (window.inner_width().unwrap().as_f64().unwrap() / 1.10) as i64;
-    let c_height = (window.inner_height().unwrap().as_f64().unwrap() / 1.5) as i64;
+    let c_height = (window.inner_height().unwrap().as_f64().unwrap() / 1.60) as i64;
+    let test_state = use_shared_state::<TestState>(cx).unwrap();
 
     let pressed = use_state(cx, || false);
 
@@ -43,30 +39,24 @@ pub fn Canvas<'a>(cx: Scope<'a, CanvasProps<'a>>) -> Element {
             context.line_to(cords.x, cords.y);
             context.stroke();
         }
-        Event::MouseDown(e) => {
+        Event::MouseDown(_) => {
             pressed.set(true);
-            cx.props.ondraw.call(e);
+            test_state.write().has_drawn = true;
             let context = get_context();
             context.begin_path();
         }
     };
 
-    let clear_canvas = move |e: MouseEvent| {
+    let clear_canvas = move |_| {
         let context = get_context();
-        cx.props.onclear.call(e);
+        test_state.write().has_drawn = false;
         context.clear_rect(0.0, 0.0, c_width as f64, c_height as f64);
     };
 
     cx.render(rsx! {
             div { class: "flex flex-col justify-center",
-                div { class: "flex flex-row justify-center",
-                    button { class: "text-white bg-gray-800 hover:bg-gray-900 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700",
-                        onclick: clear_canvas,
-                        "Clear"
-                    }
-                }
-
-                canvas { class: "place-self-center",
+                // The canvas itself
+                canvas { class: "place-self-center rounded-lg",
                     id: "drawing-box",
                     height: c_height,
                     width: c_width,
@@ -75,7 +65,74 @@ pub fn Canvas<'a>(cx: Scope<'a, CanvasProps<'a>>) -> Element {
                     onmousemove: move |event| event_handler(Event::MouseMove(event)),
                     onmouseup: move |event| event_handler(Event::MouseUp(event)),
                 }
+
+                // Button for clearing canvas
+                div { class: "flex flex-row justify-center",
+                    button { class: "text-white bg-gray-800 rounded hover:bg-gray-900 font-medium text-sm px-5 py-2.5 me-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700",
+                        width: "{c_width}px",
+                        onclick: clear_canvas,
+                        "Clear"
+                    }
+                }
+
+                // Buttons for submitting
+                Buttons {
+                    onclear: clear_canvas
+                }
             }
+    })
+}
+
+#[derive(Props)]
+struct ButtonsProps<'a> {
+    onclear: EventHandler<'a, MouseEvent>,
+}
+
+fn Buttons<'a>(cx: Scope<'a, ButtonsProps<'a>>) -> Element {
+    let test_state = use_shared_state::<TestState>(cx).unwrap();
+    let submitted = use_state(cx, || false);
+
+    cx.render(rsx! {
+       if *submitted.get() {
+            rsx! {
+                    div { class: "flex flex-col text-center py-8",
+                    span { class: "text-xl",
+                    "Would you like a harder question?"
+                    }
+                        div {
+                            button { class: "m-6 px-6 py-2 w-1/4 rounded text-white text-sm tracking-wider font-medium outline-none border-2 border-red-600 bg-red-600 hover:bg-transparent hover:text-black transition-all duration-300",
+                                onclick: move |evt| {
+                                    cx.props.onclear.call(evt);
+                                    submitted.set(false);
+                                    test_state.write().perform_action(Action::Next)
+                                },
+                                "No"
+                            }
+                            button { class: "m-6 px-6 py-2 w-1/4 rounded text-white text-sm tracking-wider font-medium outline-none border-2 border-green-600 bg-green-600 hover:bg-transparent hover:text-black transition-all duration-300",
+                                onclick: move |evt| {
+                                    cx.props.onclear.call(evt);
+                                    submitted.set(false);
+                                    test_state.write().perform_action(Action::LevelUp)
+                                },
+                                "Yes"
+                            }
+                        }
+                    }
+            }
+        } else {
+            rsx! {
+                if test_state.read().has_drawn {
+                    rsx! {
+                        div { class: "flex justify-center py-8",
+                            button { class: "px-2 py-2.5 min-w-[140px] w-2/5 bg-gradient-to-r from-green-400 rounded text-white text-sm tracking-wider font-medium border-none outline-none bg-green-600 active:from-green-500",
+                                onclick: move |_| submitted.set(true),
+                                "Submit"
+                            }
+                        }
+                    }
+                }
+            }
+        }
     })
 }
 

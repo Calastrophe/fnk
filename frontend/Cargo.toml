@@ -19,4 +19,4 @@ dioxus-web = "0.4.0"
 dioxus-router = "0.4.1"
 validator = { version = "0.16.1", features = ["derive"] }
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3.64", features = ["CanvasRenderingContext2d", "CssStyleDeclaration", "Document", "Element", "EventTarget", "HtmlCanvasElement", "HtmlElement", "MouseEvent", "Node", "Window"] }
+web-sys = { version = "0.3.64", features = ["CanvasRenderingContext2d", "CssStyleDeclaration", "Document", "Element", "EventTarget", "HtmlCanvasElement", "HtmlElement", "MouseEvent", "Node", "Window", "SpeechSynthesis", "SpeechSynthesisUtterance"] }

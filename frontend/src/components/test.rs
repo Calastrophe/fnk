@@ -4,15 +4,17 @@ use crate::api::{
     APIError,
 };
 use dioxus::prelude::*;
+use web_sys::SpeechSynthesisUtterance;
 
-struct TestState {
+pub struct TestState {
     state: State,
     level: i32,
     attempt: i32,
-    has_drawn: bool,
+    pub has_drawn: bool,
 }
 
 pub enum Action {
+    Quit,
     Next,
     LevelUp,
 }
@@ -26,7 +28,7 @@ enum State {
 impl TestState {
     pub fn new() -> Self {
         TestState {
-            state: State::Registration,
+            state: State::Testing,
             level: 1,
             attempt: 1,
             has_drawn: false,
@@ -35,6 +37,7 @@ impl TestState {
 
     pub fn perform_action(&mut self, action: Action) {
         match action {
+            Action::Quit => self.state = State::Finished,
             Action::Next => match self.attempt {
                 1..=2 => self.attempt += 1,
                 3 => self.state = State::Finished,
@@ -56,37 +59,17 @@ pub fn Test(cx: Scope, id: String) -> Element {
     let _ = use_shared_state_provider(cx, || TestState::new());
     let test_state = use_shared_state::<TestState>(cx).unwrap();
 
-    let visible = match test_state.read().has_drawn {
-        true => "visible",
-        _ => "hidden",
-    };
-
     cx.render(match test_state.read().state {
         State::Testing => {
             rsx! {
+                button { class: "absolute top-0 right-0 mt-2 mr-2 py-2 px-4 bg-red-600 text-white rounded-full hover:bg-red-700",
+                    onclick: move |_| test_state.write().perform_action(Action::Quit),
+                    "Quit"
+                }
+
                 QuestionBar { level: test_state.read().level, attempt: test_state.read().attempt }
 
-                Canvas {
-                    ondraw: move |_| test_state.write().has_drawn = true,
-                    onclear: move |_| test_state.write().has_drawn = false,
-                }
-
-                div {
-                    visibility: "{visible}",
-                    "Do you want a harder question?",
-                    div {
-                        button {
-                            visibility: "{visible}",
-                            onclick: move |_| test_state.write().perform_action(Action::Next),
-                            "No",
-                        }
-                        button {
-                            visibility: "{visible}",
-                            onclick: move |_| test_state.write().perform_action(Action::LevelUp),
-                            "Yes",
-                        }
-                    }
-                }
+                Canvas {}
             }
         }
         State::Registration => {
@@ -99,18 +82,40 @@ pub fn Test(cx: Scope, id: String) -> Element {
     })
 }
 
+fn speak(text: &str) {
+    let window = web_sys::window().unwrap();
+    let speech_synthesis = window.speech_synthesis().unwrap();
+    let utterance = SpeechSynthesisUtterance::new_with_text(text).unwrap();
+
+    speech_synthesis.speak(&utterance);
+}
+
 #[inline_props]
 fn QuestionBar(cx: Scope, level: i32, attempt: i32) -> Element {
     let questions = use_future(cx, level, |level| async move { get_questions(level).await });
 
     let question = match questions.value() {
         Some(Ok(questions)) => {
-            let question = &questions[(*attempt - 1) as usize].question;
+            let question = &questions[(*attempt - 1) as usize];
 
-            // TODO: Implement image in question, if needed
-            rsx! { div {
-                class: "flex justify-center py-20",
-                "{question}" }
+            rsx! {
+                div {
+                    class: "text-center py-6 text-xl",
+                    span { class: "cursor-pointer",
+                        onclick: move |_| speak(&question.question),
+                        "{question.question}"
+                    }
+
+                    if question.image_path.is_some() {
+                        rsx! {
+                            img { class: "block mx-auto",
+                                height: "128",
+                                width: "128",
+                                src: "/{question.image_path.clone().unwrap()}",
+                            }
+                        }
+                    }
+                }
             }
         }
         Some(Err(_)) => rsx! { div { "There was an error fetching questions..." } },
@@ -191,15 +196,26 @@ fn Finished(cx: Scope, id: String, level: i32) -> Element {
         set_level(&id, level).await
     });
 
-    cx.render(match resp.value() {
+    let resp_text = match resp.value() {
         Some(Ok(_)) => {
             rsx! { "Thank you, your score has been submitted." }
         }
-        Some(Err(e)) => {
-            rsx! { "There was an error submitting your score... {e}" }
+        Some(Err(_)) => {
+            rsx! { "There was an error submitting your score..." }
         }
         None => {
             rsx! { "Submitting your score..." }
+        }
+    };
+
+    cx.render(rsx! {
+        div {
+            background_color: "#F3F4F6",
+            style: "height: 100vh; width: 100vw; display: flex; justify-content: center; align-items: center;",
+            div {
+                class: "text-black-300 font-medium text-3xl",
+                resp_text
+            }
         }
     })
 }

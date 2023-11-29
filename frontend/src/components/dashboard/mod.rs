@@ -37,7 +37,26 @@ pub fn Dashboard(cx: Scope) -> Element {
             onrefresh: move |_| tests_fut.restart(),
         }
 
-        tests_rendered
+        div { class: "py-14 overflow-x-auto",
+            table { class: "min-w-full bg-white font-[sans-serif]",
+                thead { class: "bg-gray-100 whitespace-nowrap",
+                    tr {
+                        th { class: "px-6 py-3 text-left text-sm font-semibold text-black",
+                            "Name"
+                        }
+                        th { class: "px-6 py-3 text-left text-sm font-semibold text-black",
+                            "Status"
+                        }
+                        th { class: "px-6 py-3 text-left text-sm font-semibold text-black",
+                            "Link"
+                        }
+                    }
+                }
+                tbody { class: "whitespace-nowrap divide-y divide-gray-200",
+                    tests_rendered
+                }
+            }
+        }
     })
 }
 
@@ -48,9 +67,9 @@ fn TestComponent<'a>(cx: Scope, test: &'a Test) -> Element {
 
     let results_rendered = match results.value() {
         Some(Ok(results)) => rsx! {
-            results.iter().map(|r| {
-                rsx! { ResultComponent { result:r } }
-            })
+                results.iter().map(|r| {
+                    rsx! { ResultComponent { result:r } }
+                })
         },
         Some(Err(_)) => rsx! {
                 div { "There was an issue fetching the results for {test.name}..." }
@@ -58,34 +77,63 @@ fn TestComponent<'a>(cx: Scope, test: &'a Test) -> Element {
         None => rsx! { div { "Fetching the results..." } },
     };
 
-    cx.render(if *drop_down.get() {
-        rsx! {
-            div {
-                button {
-                    onclick: |_| drop_down.modify(|v| !v),
-                    "▲"
-                }
-                "{test.name}"
-            }
+    let is_empty = match results.value() {
+        Some(Ok(v)) => v.is_empty(),
+        _ => true,
+    };
 
-            results_rendered
-        }
-    } else {
-        rsx! {
-           div {
-               button {
-                   onclick: |_| drop_down.modify(|v| !v),
-                   "▼"
+    cx.render(rsx! {
+           tr { class: "hover:bg-blue-50 pl-6 w-8",
+               td { class: "px-6 py-3 text-sm cursor-pointer",
+                    onclick: |_| drop_down.modify(|v| !v),
+                    "{test.name}"
                }
-               "{test.name}"
+
+               td { class: "px-6 py-3 text-sm",
+                    "{test.closed}"
+               }
+
+               td { class: "px-6 py-3 text-sm cursor-pointer",
+                    "dummy link"
+               }
            }
-        }
+
+           if *drop_down.get() && !is_empty {
+               rsx! {
+                tr {
+                    table { class: "min-w-full bg-white font-[sans-serif]",
+                        thead { class: "whitespace-nowrap",
+                            th { class: "px-6 py-3 text-left text-sm font-semibold text-black",
+                                "Name"
+                            }
+                            th { class: "px-6 py-3 text-center text-sm font-semibold text-black",
+                                "Level"
+                            }
+
+                            results_rendered
+                        }
+                    }
+                }
+                }
+           }
     })
 }
 
 #[inline_props]
 fn ResultComponent<'a>(cx: Scope, result: &'a StudentResult) -> Element {
     cx.render(rsx! {
-        div { "{result.name} : {result.level}" }
+        tr {
+            td { class: "px-6 py-3 text-sm",
+                "{result.name}"
+            }
+            td { class: "px-6 py-3 text-center text-sm",
+                "{result.level}"
+            }
+        }
     })
+}
+
+#[inline_props]
+fn QRCodeGenerator<'a>(cx: Scope, id: &'a str) -> Element {
+    None
 }

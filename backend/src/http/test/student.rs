@@ -65,7 +65,7 @@ async fn register_student(
         // Is the test closed?
         if test.closed {
             return Err(Error::Conflict(
-                "The test is closed to new registration".to_string(),
+                "This test is closed to new registration".to_string(),
             ));
         }
 
@@ -106,7 +106,7 @@ async fn register_student(
     }
 
     Err(Error::UnprocessableEntity(
-        "The given test ID does not exist".to_string(),
+        "This test ID is not valid".to_string(),
     ))
 }
 
