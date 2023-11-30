@@ -3,6 +3,7 @@ use axum::http::{header, HeaderMap, StatusCode};
 use axum::middleware;
 use axum::response::IntoResponse;
 use axum::{routing::post, Extension, Json, Router};
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -128,5 +129,15 @@ async fn set_score(
     .execute(&db)
     .await?;
 
-    Ok(())
+    let cookie = Cookie::build("TEACHER_TOKEN", "")
+        .path("/")
+        .max_age(time::Duration::hours(-1))
+        .same_site(SameSite::Lax)
+        .http_only(true)
+        .finish();
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+
+    Ok((StatusCode::ACCEPTED, headers))
 }

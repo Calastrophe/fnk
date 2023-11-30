@@ -2,8 +2,6 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-pushd frontend
-CARGO_TARGET_DIR=../target-trunk trunk build --release --public-url /
-popd
-
-cargo run --bin backend --release -- --port 8080 --static-dir ./dist
+(trap 'kill 0' SIGINT; \
+ bash -c 'cd frontend; dx serve --release' & \
+ bash -c 'cd backend; cargo run --bin backend --release -- --port 8080 --static-dir ./dist')

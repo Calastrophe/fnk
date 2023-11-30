@@ -1,6 +1,6 @@
 use super::canvas::Canvas;
 use crate::api::{
-    test::{get_questions, register_student, set_level, Question},
+    test::{get_questions, register_student, set_level},
     APIError,
 };
 use dioxus::prelude::*;

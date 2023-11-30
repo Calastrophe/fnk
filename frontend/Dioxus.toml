@@ -20,4 +20,4 @@ index_on_404 = true
 [web.resource.dev]
 
 [[web.proxy]]
-backend = "http://[::1]:8081/v1/"
+backend = "http://[::1]:8080/v1/"

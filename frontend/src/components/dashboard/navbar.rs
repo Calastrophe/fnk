@@ -9,9 +9,7 @@ pub struct NavBarProps<'a> {
 pub fn NavBar<'a>(cx: Scope<'a, NavBarProps<'a>>) -> Element {
     cx.render(rsx! {
         nav { class: "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700",
-            div { class: "max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4",
-                CreateButton {}
-
+            div { class: "max-w-full flex flex-wrap items-center justify-between mx-auto p-4",
                 button { class: "flex items-center px-4 py-2 font-medium tracking-wide text-white capitalize transition-colors duration-300 transform bg-indigo-600 rounded-lg hover:bg-indigo-500 focus:outline-none focus:ring focus:ring-indigo-300 focus:ring-opacity-80",
                     onclick: move |evt| cx.props.onrefresh.call(evt),
                     svg { class: "w-5 h-5 mx-1",
@@ -26,9 +24,11 @@ pub fn NavBar<'a>(cx: Scope<'a, NavBarProps<'a>>) -> Element {
                     }
 
                     span { class: "mx-1",
-                        "Refetch tests"
+                        "Refetch"
                     }
                 }
+
+                CreateButton {}
             }
         }
     })
@@ -64,22 +64,27 @@ fn CreateButton(cx: Scope) -> Element {
 
     cx.render(if *visible.get() {
         rsx! {
-            form {
+            form { class: "max-h-10 flex flex-row",
                 onsubmit: on_submit,
-                input { name: "name" },
-                button {
-                    onclick: move |_| visible.set(false),
-                    "Cancel"
-                }
-                button {
-                    "Submit"
-                }
                 if is_err {
                     rsx! {
-                        span {
+                        div { class: "mr-2 px-4 py-2 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400",
+                            span { class: "font-medium",
+                                "Invalid! "
+                            }
                             "{msg}"
                         }
                     }
+                }
+                input { class: "mr-2 px-4 py-2 bg-gray-100 text-sm outline-[#333] rounded",
+                    name: "name" 
+                },
+                button { class: "mr-2 items-center px-4 py-2 font-medium tracking-wide text-white capitalize transition-colors duration-300 transform bg-indigo-600 rounded-lg hover:bg-indigo-500 focus:outline-none focus:ring focus:ring-indigo-300 focus:ring-opacity-80",
+                    "Submit"
+                }
+                button { class: "items-center px-4 py-2 font-medium tracking-wide text-white capitalize transition-colors duration-300 transform bg-indigo-600 rounded-lg hover:bg-indigo-500 focus:outline-none focus:ring focus:ring-indigo-300 focus:ring-opacity-80",
+                    onclick: move |_| visible.set(false),
+                    "Cancel"
                 }
             }
         }
@@ -90,7 +95,7 @@ fn CreateButton(cx: Scope) -> Element {
                     resp_text.set(None);
                     visible.set(true)
                 },
-                "Create a new test"
+                "Create"
             }
         }
     })

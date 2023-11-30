@@ -1,6 +1,8 @@
 use axum::http::{header, HeaderMap, StatusCode};
+use axum::middleware;
 use axum::response::IntoResponse;
 use axum::{routing::post, Extension, Json, Router};
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use rand::Rng;
 use sqlx::PgPool;
 use std::time::Duration;
@@ -10,10 +12,16 @@ use crate::util::Config;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+use super::auth::teacher_auth;
+
 pub fn router() -> Router {
     Router::new()
         .route("/v1/teacher/login", post(login_teacher))
         .route("/v1/teacher/register", post(register_teacher))
+        .route(
+            "/v1/teacher/logout",
+            post(logout_teacher).route_layer(middleware::from_fn(teacher_auth)),
+        )
 }
 
 #[derive(Deserialize, Validate)]
@@ -85,7 +93,7 @@ async fn register_teacher(
         _ => e.into(),
     })?;
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(StatusCode::ACCEPTED)
 }
 
 async fn login_teacher(
@@ -122,4 +130,18 @@ async fn login_teacher(
     Err(Error::UnprocessableEntity(
         "Invalid username/password".into(),
     ))
+}
+
+async fn logout_teacher() -> Result<impl IntoResponse> {
+    let cookie = Cookie::build("TEACHER_TOKEN", "")
+        .path("/")
+        .max_age(time::Duration::hours(-1))
+        .same_site(SameSite::Lax)
+        .http_only(true)
+        .finish();
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+
+    Ok((StatusCode::ACCEPTED, headers))
 }

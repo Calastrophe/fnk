@@ -1,11 +1,10 @@
 use crate::api::{
-    dashboard::{get_results, get_tests, StudentResult, Test},
+    dashboard::{get_results, get_tests, inverse_closed, StudentResult, Test},
     APIError,
 };
 use dioxus::prelude::*;
 use dioxus_router::prelude::use_navigator;
 use navbar::NavBar;
-
 mod navbar;
 
 pub fn Dashboard(cx: Scope) -> Element {
@@ -45,7 +44,7 @@ pub fn Dashboard(cx: Scope) -> Element {
                             "Name"
                         }
                         th { class: "px-6 py-3 text-left text-sm font-semibold text-black",
-                            "Status"
+                            "Open"
                         }
                         th { class: "px-6 py-3 text-left text-sm font-semibold text-black",
                             "Link"
@@ -77,6 +76,13 @@ fn TestComponent<'a>(cx: Scope, test: &'a Test) -> Element {
         None => rsx! { div { "Fetching the results..." } },
     };
 
+    let close = move |_: FormEvent| {
+        to_owned![test.id];
+        cx.spawn(async move {
+            let _ = inverse_closed(&id).await;
+        });
+    };
+
     let is_empty = match results.value() {
         Some(Ok(v)) => v.is_empty(),
         _ => true,
@@ -90,11 +96,18 @@ fn TestComponent<'a>(cx: Scope, test: &'a Test) -> Element {
                }
 
                td { class: "px-6 py-3 text-sm",
-                    "{test.closed}"
+                label { class: "relative inline-flex items-center mb-5 cursor-pointer",
+                    input {
+                        oninput: close,
+                        r#type: "checkbox",
+                        checked: "{!test.closed}",
+                        name: "toggle",
+                        "{test.closed}"
+                    }
+                }
                }
-
                td { class: "px-6 py-3 text-sm cursor-pointer",
-                    "dummy link"
+                    Link { id: &test.id }
                }
            }
 
@@ -134,6 +147,28 @@ fn ResultComponent<'a>(cx: Scope, result: &'a StudentResult) -> Element {
 }
 
 #[inline_props]
-fn QRCodeGenerator<'a>(cx: Scope, id: &'a str) -> Element {
-    None
+fn Link<'a>(cx: Scope, id: &'a str) -> Element {
+    cx.render(rsx! {
+        a { class: "inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800",
+            href: "http://localhost:8080/test/{id}/",
+            "Navigate to the test",
+                svg { class: "w-4 h-4 rtl:rotate-180",
+                xmlns: "http://www.w3.org/2000/svg",
+                fill: "none",
+                view_box: "0 0 14 10",
+                path { 
+                    stroke: "currentColor",
+                    stroke_linecap: "round",
+                    stroke_linejoin: "round",
+                    stroke_width: "2",
+                    d: "M1 5h12m0 0L9 1m4 4L9 9",
+                }
+
+            }
+        }
+    })
 }
+
+
+
+
