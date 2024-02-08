@@ -17,6 +17,7 @@ use axum::{
     routing::get,
     Router,
 };
+use axum_server::tls_rustls::RustlsConfig;
 use sqlx::PgPool;
 use tokio::fs;
 use tower::{ServiceBuilder, ServiceExt};
@@ -33,7 +34,7 @@ pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
 pub fn app(opt: Opt, db: PgPool, cfg: Config) -> Router {
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:8080".parse::<HeaderValue>().unwrap())
+        .allow_origin("https://localhost:8080".parse::<HeaderValue>().unwrap())
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
@@ -65,16 +66,24 @@ pub fn app(opt: Opt, db: PgPool, cfg: Config) -> Router {
         .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()))
 }
 
-pub async fn serve(opt: Opt, db: PgPool, cfg: Config) -> anyhow::Result<()> {
-    let sock_addr = SocketAddr::from((
-        IpAddr::from_str(opt.addr.as_str()).unwrap_or(IpAddr::V6(Ipv6Addr::LOCALHOST)),
-        opt.port,
-    ));
+pub async fn serve(opt: Opt, db: PgPool, cfg: Config, tls: RustlsConfig) -> anyhow::Result<()> {
+    // let sock_addr = SocketAddr::from((
+    //     IpAddr::from_str(opt.addr.as_str()).unwrap_or(IpAddr::V6(Ipv6Addr::LOCALHOST)),
+    //     opt.port,
+    // ));
 
-    tracing::info!("listening on http://{}", sock_addr);
-
-    axum::Server::bind(&sock_addr)
-        .serve(app(opt, db, cfg).into_make_service())
+    let listener = tokio::net::TcpListener::bind((opt.addr.as_str(), opt.port))
         .await
-        .context("API failed to serve")
+        .context("listener failed")?;
+
+    tracing::info!("listening on http://{}:{}", opt.addr, opt.port);
+
+    axum::serve(listener, app(opt, db, cfg).into_make_service())
+        .await
+        .context("failed to serve api")
+
+    // axum_server::bind_rustls(sock_addr, tls)
+    //     .serve(app(opt, db, cfg).into_make_service())
+    //     .await
+    //     .context("failed to serve api")
 }

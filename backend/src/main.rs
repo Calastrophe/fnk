@@ -1,4 +1,5 @@
 use anyhow::Context;
+use axum_server::tls_rustls::RustlsConfig;
 use clap::Parser;
 use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
@@ -20,6 +21,10 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::init();
 
+    let tls = RustlsConfig::from_pem_file("../ssl/cert.pem", "../ssl/key.pem")
+        .await
+        .context("Missing certifications")?;
+
     let db = PgPoolOptions::new()
         .max_connections(20)
         .connect(&config.db_url)
@@ -29,5 +34,5 @@ async fn main() -> anyhow::Result<()> {
     sqlx::migrate!().run(&db).await?;
 
     tracing::info!("Successfully established a connection to the database!");
-    http::serve(opt, db, config).await
+    http::serve(opt, db, config, tls).await
 }

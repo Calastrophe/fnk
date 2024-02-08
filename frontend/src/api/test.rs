@@ -1,4 +1,4 @@
-use super::{handle_response, handle_response_unit, APIError, RegisterStudent, SetLevel};
+use super::{handle_response, handle_response_unit, APIError, RegisterStudent, SetLevel, API_URL};
 
 #[derive(serde::Deserialize, PartialEq)]
 pub struct Question {
@@ -10,7 +10,7 @@ pub struct Question {
 
 pub async fn get_questions(level: i32) -> Result<Vec<Question>, APIError> {
     let response = reqwest::Client::new()
-        .get(format!("http://localhost:8080/v1/question/{level}"))
+        .get(format!("{API_URL}/question/{level}"))
         .send()
         .await?;
 
@@ -19,7 +19,7 @@ pub async fn get_questions(level: i32) -> Result<Vec<Question>, APIError> {
 
 pub async fn register_student(id: &str, name: &str) -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post(format!("http://localhost:8080/v1/test/{id}/register"))
+        .post(format!("{API_URL}/test/{id}/register"))
         .json(&RegisterStudent {
             name: name.to_string(),
         })
@@ -31,7 +31,7 @@ pub async fn register_student(id: &str, name: &str) -> Result<(), APIError> {
 
 pub async fn set_level(id: &str, level: i32) -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post(format!("http://localhost:8080/v1/test/{id}"))
+        .post(format!("{API_URL}/test/{id}"))
         .json(&SetLevel { level })
         .send()
         .await?;

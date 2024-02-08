@@ -1,4 +1,4 @@
-use super::{handle_response, handle_response_unit, APIError, CreateTest};
+use super::{handle_response, handle_response_unit, APIError, CreateTest, API_URL};
 use serde::Deserialize;
 
 #[derive(Deserialize, PartialEq)]
@@ -19,7 +19,7 @@ pub struct StudentResult {
 
 pub async fn create_test(name: &str) -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post("http://localhost:8080/v1/test")
+        .post(format!("{API_URL}/test"))
         .json(&CreateTest {
             name: name.to_string(),
         })
@@ -31,7 +31,7 @@ pub async fn create_test(name: &str) -> Result<(), APIError> {
 
 pub async fn inverse_closed(id: &str) -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post(format!("http://localhost:8080/v1/test/{id}/manage"))
+        .post(format!("{API_URL}/test/{id}/manage"))
         .send()
         .await?;
 
@@ -40,7 +40,7 @@ pub async fn inverse_closed(id: &str) -> Result<(), APIError> {
 
 pub async fn get_results(id: &str) -> Result<Vec<StudentResult>, APIError> {
     let response = reqwest::Client::new()
-        .get(format!("http://localhost:8080/v1/test/{id}/manage"))
+        .get(format!("{API_URL}/test/{id}/manage"))
         .send()
         .await?;
 
@@ -49,7 +49,7 @@ pub async fn get_results(id: &str) -> Result<Vec<StudentResult>, APIError> {
 
 pub async fn get_tests() -> Result<Vec<Test>, APIError> {
     let response = reqwest::Client::new()
-        .get("http://localhost:8080/v1/test")
+        .get(format!("{API_URL}/test"))
         .send()
         .await?;
 

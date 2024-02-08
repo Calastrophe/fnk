@@ -7,6 +7,8 @@ use thiserror::Error;
 
 // API internal types for creating / parsing JSON requests & responses
 
+const API_URL: &'static str = "http://localhost:8080/v1";
+
 #[derive(Debug, Error)]
 pub enum APIError {
     #[error("An unexpected error occurred when trying to communicate with the server")]

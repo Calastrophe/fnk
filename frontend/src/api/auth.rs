@@ -1,8 +1,8 @@
-use super::{handle_response_unit, APIError, LoginTeacher, RegisterStudent, RegisterTeacher};
+use super::{handle_response_unit, APIError, LoginTeacher, RegisterTeacher, API_URL};
 
 pub async fn register_teacher(email: &str, username: &str, password: &str) -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post("http://localhost:8080/v1/teacher/register")
+        .post(format!("{API_URL}/teacher/register"))
         .json(&RegisterTeacher {
             email: email.to_string(),
             username: username.to_string(),
@@ -16,7 +16,7 @@ pub async fn register_teacher(email: &str, username: &str, password: &str) -> Re
 
 pub async fn login_teacher(email: &str, password: &str) -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post("http://localhost:8080/v1/teacher/login")
+        .post(format!("{API_URL}/teacher/login"))
         .json(&LoginTeacher {
             email: email.to_string(),
             password: password.to_string(),
@@ -29,7 +29,7 @@ pub async fn login_teacher(email: &str, password: &str) -> Result<(), APIError> 
 
 pub async fn logout_teacher() -> Result<(), APIError> {
     let response = reqwest::Client::new()
-        .post("http://localhost:8080/v1/teacher/logout")
+        .post(format!("{API_URL}/teacher/logout"))
         .send()
         .await?;
 

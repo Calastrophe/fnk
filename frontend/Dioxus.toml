@@ -20,4 +20,11 @@ index_on_404 = true
 [web.resource.dev]
 
 [[web.proxy]]
-backend = "http://[::1]:8080/v1/"
+backend = "http://[::1]:8081/v1/"
+# backend = "https://[::1]:8081/v1/"
+
+# [web.https]
+# enabled = true
+# mkcert = true
+# cert_path = "../ssl/cert.pem"
+# key_path = "../ssl/key.pem"

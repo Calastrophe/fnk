@@ -1,4 +1,5 @@
 use axum::{
+    body::Body,
     http::{header, Request},
     middleware::Next,
     response::IntoResponse,
@@ -20,12 +21,12 @@ pub struct TokenClaims {
     pub exp: usize,
 }
 
-pub async fn teacher_auth<B>(
+pub async fn teacher_auth(
     cookie_jar: CookieJar,
     Extension(db): Extension<PgPool>,
     Extension(cfg): Extension<Config>,
-    mut req: Request<B>,
-    next: Next<B>,
+    mut req: Request<Body>,
+    next: Next,
 ) -> Result<impl IntoResponse> {
     let token = cookie_jar
         .get("TEACHER_TOKEN")
@@ -70,12 +71,12 @@ pub async fn teacher_auth<B>(
     Ok(next.run(req).await)
 }
 
-pub async fn student_auth<B>(
+pub async fn student_auth(
     cookie_jar: CookieJar,
     Extension(db): Extension<PgPool>,
     Extension(cfg): Extension<Config>,
-    mut req: Request<B>,
-    next: Next<B>,
+    mut req: Request<Body>,
+    next: Next,
 ) -> Result<impl IntoResponse> {
     let token = cookie_jar
         .get("STUDENT_TOKEN")
@@ -141,12 +142,11 @@ pub async fn create_cookie(cookie_name: &str, id: uuid::Uuid, cfg: Config) -> St
     )
     .unwrap();
 
-    let cookie = Cookie::build(cookie_name, token.to_owned())
+    let cookie = Cookie::build((cookie_name, token.to_owned()))
         .path("/")
         .max_age(time::Duration::hours(1))
         .same_site(SameSite::Lax)
-        .http_only(true)
-        .finish();
+        .http_only(true);
 
     cookie.to_string()
 }

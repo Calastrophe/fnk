@@ -12,8 +12,8 @@ non_snake_case = { level = "allow", priority = 0 }
 uuid = { version = "1.5.0", features = ["v4", "serde", "js"] }
 serde = { version = "1.0.192", features = ["derive"] }
 serde_json = { version = "1.0.108"}
-thiserror = "1.0.50"
-reqwest = { version = "0.11.22", features = ["json"] }
+thiserror = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
 dioxus = "0.4.0"
 dioxus-web = "0.4.0"
 dioxus-router = "0.4.1"

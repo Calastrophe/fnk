@@ -1,6 +1,7 @@
 target/
 target-trunk/
 .env
+ssl/*
 /dist/
 frontend/dist/
 /.log/

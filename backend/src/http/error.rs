@@ -3,7 +3,7 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 
 use serde_with::DisplayFromStr;
-use validator::{ValidationErrors, ValidationErrorsKind};
+use validator::ValidationErrors;
 
 /// An API-friendly error type.
 #[derive(thiserror::Error, Debug)]

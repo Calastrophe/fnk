@@ -133,12 +133,11 @@ async fn login_teacher(
 }
 
 async fn logout_teacher() -> Result<impl IntoResponse> {
-    let cookie = Cookie::build("TEACHER_TOKEN", "")
+    let cookie = Cookie::build(("TEACHER_TOKEN", ""))
         .path("/")
         .max_age(time::Duration::hours(-1))
         .same_site(SameSite::Lax)
-        .http_only(true)
-        .finish();
+        .http_only(true);
 
     let mut headers = HeaderMap::new();
     headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
